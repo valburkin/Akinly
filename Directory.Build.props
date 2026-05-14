@@ -1,0 +1,26 @@
+<Project>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- The .NET 10 analyzers' recommended rule set plus .editorconfig code style, enforced
+         at build time. Warnings fail the build. The rule set is named, not "latest", so a
+         newer SDK cannot fail an unchanged build; raise it on purpose. -->
+    <AnalysisLevel>10.0-recommended</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- Every public member carries an XML comment (CS1591 stays on); the file also lets
+         the build flag unused usings (IDE0005). -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- Restore audits every package, transitive ones included, against the known
+         vulnerabilities; with warnings as errors, one found fails the build. -->
+    <NuGetAudit>true</NuGetAudit>
+    <NuGetAuditMode>all</NuGetAuditMode>
+    <!-- Resolved packages are recorded in packages.lock.json, so a build never picks up a
+         version nobody reviewed. -->
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+  </PropertyGroup>
+
+</Project>

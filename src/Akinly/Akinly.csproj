@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Clustering of embedded items by cosine similarity. No dependencies. -->
+
+</Project>
