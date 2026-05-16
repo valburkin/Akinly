@@ -16,5 +16,5 @@ public interface IClusterer
     IReadOnlyList<ItemCluster> Cluster(
         IReadOnlyList<(long ItemId, float[] Embedding)> items,
         int minClusterSize,
-        double similarityThreshold = 0.78);
+        double similarityThreshold = 0.85);
 }

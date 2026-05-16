@@ -11,13 +11,13 @@ namespace Akinly;
 /// </remarks>
 public sealed class GreedyCosineClusterer : IClusterer
 {
-    private const int SampleSize = 10;
+    private const int SampleEachEnd = 5;
 
     /// <inheritdoc />
     public IReadOnlyList<ItemCluster> Cluster(
         IReadOnlyList<(long ItemId, float[] Embedding)> items,
         int minClusterSize,
-        double similarityThreshold = 0.78)
+        double similarityThreshold = 0.85)
     {
         ArgumentNullException.ThrowIfNull(items);
         if (items.Count == 0)
@@ -63,16 +63,21 @@ public sealed class GreedyCosineClusterer : IClusterer
                 continue;
             }
 
+            // A diverse sample: the members nearest the centroid show what the cluster is
+            // about, and the farthest ones still in it show how far it strays, so a reader
+            // (or a labeling model) can tell a coherent cluster from a loose one.
             var memberSet = members[i].ToHashSet();
-            var nearest = normalized
+            var byProximity = normalized
                 .Where(n => memberSet.Contains(n.ItemId))
                 .Select(n => (n.ItemId, Similarity: Dot(n.Vector, centroids[i])))
                 .OrderByDescending(n => n.Similarity)
-                .Take(SampleSize)
                 .Select(n => n.ItemId)
                 .ToArray();
+            var nearest = byProximity.Take(SampleEachEnd);
+            var farthest = byProximity.Reverse().Take(SampleEachEnd);
+            var sample = nearest.Concat(farthest).Distinct().ToArray();
 
-            clusters.Add(new ItemCluster(clusters.Count, centroids[i], members[i], nearest));
+            clusters.Add(new ItemCluster(clusters.Count, centroids[i], members[i], sample));
         }
 
         return clusters;
