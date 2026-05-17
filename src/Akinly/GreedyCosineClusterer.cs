@@ -7,12 +7,12 @@ namespace Akinly;
 /// </summary>
 /// <remarks>
 /// One pass, O(n × k) for n items and k clusters: good enough for a few thousand items.
-/// The result depends on the input order.
+/// The result depends on the input order, and a cluster that forms early around a
+/// dominant topic can drift toward its neighbors as borderline items join it; see
+/// <see cref="LeaderCosineClusterer"/>.
 /// </remarks>
 public sealed class GreedyCosineClusterer : IClusterer
 {
-    private const int SampleEachEnd = 5;
-
     /// <inheritdoc />
     public IReadOnlyList<ItemCluster> Cluster(
         IReadOnlyList<(long ItemId, float[] Embedding)> items,
@@ -27,7 +27,7 @@ public sealed class GreedyCosineClusterer : IClusterer
 
         var centroids = new List<float[]>();
         var members = new List<List<long>>();
-        var normalized = items.Select(i => (i.ItemId, Vector: Normalize(i.Embedding))).ToArray();
+        var normalized = items.Select(i => (i.ItemId, Vector: VectorMath.Normalize(i.Embedding))).ToArray();
 
         foreach (var (itemId, vector) in normalized)
         {
@@ -35,7 +35,7 @@ public sealed class GreedyCosineClusterer : IClusterer
             var bestSimilarity = double.NegativeInfinity;
             for (var i = 0; i < centroids.Count; i++)
             {
-                var similarity = Dot(vector, centroids[i]);
+                var similarity = VectorMath.Dot(vector, centroids[i]);
                 if (similarity > bestSimilarity)
                 {
                     bestSimilarity = similarity;
@@ -46,7 +46,7 @@ public sealed class GreedyCosineClusterer : IClusterer
             if (bestIndex >= 0 && bestSimilarity >= similarityThreshold)
             {
                 members[bestIndex].Add(itemId);
-                UpdateCentroid(centroids[bestIndex], vector, members[bestIndex].Count);
+                VectorMath.AddToMean(centroids[bestIndex], vector, members[bestIndex].Count);
             }
             else
             {
@@ -55,91 +55,6 @@ public sealed class GreedyCosineClusterer : IClusterer
             }
         }
 
-        var clusters = new List<ItemCluster>();
-        for (var i = 0; i < centroids.Count; i++)
-        {
-            if (members[i].Count < minClusterSize)
-            {
-                continue;
-            }
-
-            // A diverse sample: the members nearest the centroid show what the cluster is
-            // about, and the farthest ones still in it show how far it strays, so a reader
-            // (or a labeling model) can tell a coherent cluster from a loose one.
-            var memberSet = members[i].ToHashSet();
-            var byProximity = normalized
-                .Where(n => memberSet.Contains(n.ItemId))
-                .Select(n => (n.ItemId, Similarity: Dot(n.Vector, centroids[i])))
-                .OrderByDescending(n => n.Similarity)
-                .Select(n => n.ItemId)
-                .ToArray();
-            var nearest = byProximity.Take(SampleEachEnd);
-            var farthest = byProximity.Reverse().Take(SampleEachEnd);
-            var sample = nearest.Concat(farthest).Distinct().ToArray();
-
-            clusters.Add(new ItemCluster(clusters.Count, centroids[i], members[i], sample));
-        }
-
-        return clusters;
-    }
-
-    private static float[] Normalize(float[] vector)
-    {
-        var sum = 0.0;
-        for (var i = 0; i < vector.Length; i++)
-        {
-            sum += vector[i] * vector[i];
-        }
-
-        var norm = Math.Sqrt(sum);
-        if (norm < 1e-9)
-        {
-            return vector;
-        }
-
-        var copy = new float[vector.Length];
-        for (var i = 0; i < vector.Length; i++)
-        {
-            copy[i] = (float)(vector[i] / norm);
-        }
-
-        return copy;
-    }
-
-    private static double Dot(float[] a, float[] b)
-    {
-        var sum = 0.0;
-        for (var i = 0; i < a.Length; i++)
-        {
-            sum += a[i] * b[i];
-        }
-
-        return sum;
-    }
-
-    private static void UpdateCentroid(float[] centroid, float[] sample, int newCount)
-    {
-        for (var i = 0; i < centroid.Length; i++)
-        {
-            centroid[i] = ((centroid[i] * (newCount - 1)) + sample[i]) / newCount;
-        }
-
-        // Renormalize, so cosine similarity stays a dot product on the unit sphere.
-        var sum = 0.0;
-        for (var i = 0; i < centroid.Length; i++)
-        {
-            sum += centroid[i] * centroid[i];
-        }
-
-        var norm = Math.Sqrt(sum);
-        if (norm < 1e-9)
-        {
-            return;
-        }
-
-        for (var i = 0; i < centroid.Length; i++)
-        {
-            centroid[i] = (float)(centroid[i] / norm);
-        }
+        return ClusterSample.Build(normalized, centroids, members, minClusterSize);
     }
 }
