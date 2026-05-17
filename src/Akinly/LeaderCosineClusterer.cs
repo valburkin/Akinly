@@ -27,10 +27,11 @@ namespace Akinly;
 public sealed class LeaderCosineClusterer : IClusterer
 {
     /// <inheritdoc />
-    public IReadOnlyList<ItemCluster> Cluster(
-        IReadOnlyList<(long ItemId, float[] Embedding)> items,
+    public IReadOnlyList<ItemCluster<TId>> Cluster<TId>(
+        IReadOnlyList<(TId ItemId, float[] Embedding)> items,
         int minClusterSize,
         double similarityThreshold = 0.85)
+        where TId : notnull
     {
         ArgumentNullException.ThrowIfNull(items);
         if (items.Count == 0)
@@ -41,7 +42,7 @@ public sealed class LeaderCosineClusterer : IClusterer
         var normalized = items.Select(i => (i.ItemId, Vector: VectorMath.Normalize(i.Embedding))).ToArray();
         var assigned = new bool[normalized.Length];
         var centroids = new List<float[]>();
-        var members = new List<List<long>>();
+        var members = new List<List<TId>>();
 
         while (true)
         {
@@ -53,7 +54,7 @@ public sealed class LeaderCosineClusterer : IClusterer
 
             // The centroid starts as a copy of the seed and moves as followers join.
             var centroid = (float[])normalized[seed].Vector.Clone();
-            var followers = new List<long> { normalized[seed].ItemId };
+            var followers = new List<TId> { normalized[seed].ItemId };
             assigned[seed] = true;
 
             for (var i = 0; i < normalized.Length; i++)
@@ -80,7 +81,7 @@ public sealed class LeaderCosineClusterer : IClusterer
     /// them), the first unassigned item when there are no centroids yet, or -1 when every
     /// item is assigned.
     /// </summary>
-    private static int PickNextSeed((long ItemId, float[] Vector)[] normalized, bool[] assigned, List<float[]> centroids)
+    private static int PickNextSeed<TId>((TId ItemId, float[] Vector)[] normalized, bool[] assigned, List<float[]> centroids)
     {
         var bestIndex = -1;
         var lowestSimilarity = double.PositiveInfinity;

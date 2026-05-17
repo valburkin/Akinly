@@ -11,13 +11,14 @@ internal static class ClusterSample
     /// and the farthest ones still in it show how far it strays, so a reader (or a labeling
     /// model) can tell a coherent cluster from a loose one.
     /// </summary>
-    public static List<ItemCluster> Build(
-        (long ItemId, float[] Vector)[] normalized,
+    public static List<ItemCluster<TId>> Build<TId>(
+        (TId ItemId, float[] Vector)[] normalized,
         List<float[]> centroids,
-        List<List<long>> members,
+        List<List<TId>> members,
         int minClusterSize)
+        where TId : notnull
     {
-        var clusters = new List<ItemCluster>();
+        var clusters = new List<ItemCluster<TId>>();
         for (var i = 0; i < centroids.Count; i++)
         {
             if (members[i].Count < minClusterSize)
@@ -36,7 +37,7 @@ internal static class ClusterSample
             var farthest = byProximity.Reverse().Take(SampleEachEnd);
             var sample = nearest.Concat(farthest).Distinct().ToArray();
 
-            clusters.Add(new ItemCluster(clusters.Count, centroids[i], members[i], sample));
+            clusters.Add(new ItemCluster<TId>(clusters.Count, centroids[i], members[i], sample));
         }
 
         return clusters;

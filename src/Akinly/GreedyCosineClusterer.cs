@@ -14,10 +14,11 @@ namespace Akinly;
 public sealed class GreedyCosineClusterer : IClusterer
 {
     /// <inheritdoc />
-    public IReadOnlyList<ItemCluster> Cluster(
-        IReadOnlyList<(long ItemId, float[] Embedding)> items,
+    public IReadOnlyList<ItemCluster<TId>> Cluster<TId>(
+        IReadOnlyList<(TId ItemId, float[] Embedding)> items,
         int minClusterSize,
         double similarityThreshold = 0.85)
+        where TId : notnull
     {
         ArgumentNullException.ThrowIfNull(items);
         if (items.Count == 0)
@@ -26,7 +27,7 @@ public sealed class GreedyCosineClusterer : IClusterer
         }
 
         var centroids = new List<float[]>();
-        var members = new List<List<long>>();
+        var members = new List<List<TId>>();
         var normalized = items.Select(i => (i.ItemId, Vector: VectorMath.Normalize(i.Embedding))).ToArray();
 
         foreach (var (itemId, vector) in normalized)
