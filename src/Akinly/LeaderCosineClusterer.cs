@@ -39,7 +39,7 @@ public sealed class LeaderCosineClusterer : IClusterer
             return [];
         }
 
-        var normalized = items.Select(i => (i.ItemId, Vector: VectorMath.Normalize(i.Embedding))).ToArray();
+        var normalized = items.Select(i => (i.ItemId, Vector: Vectors.Normalize(i.Embedding))).ToArray();
         var assigned = new bool[normalized.Length];
         var centroids = new List<float[]>();
         var members = new List<List<TId>>();
@@ -59,14 +59,14 @@ public sealed class LeaderCosineClusterer : IClusterer
 
             for (var i = 0; i < normalized.Length; i++)
             {
-                if (assigned[i] || VectorMath.Dot(normalized[i].Vector, centroid) < similarityThreshold)
+                if (assigned[i] || Vectors.Dot(normalized[i].Vector, centroid) < similarityThreshold)
                 {
                     continue;
                 }
 
                 followers.Add(normalized[i].ItemId);
                 assigned[i] = true;
-                VectorMath.AddToMean(centroid, normalized[i].Vector, followers.Count);
+                Vectors.AddToMean(centroid, normalized[i].Vector, followers.Count);
             }
 
             centroids.Add(centroid);
@@ -97,7 +97,7 @@ public sealed class LeaderCosineClusterer : IClusterer
                 return i;
             }
 
-            var nearest = centroids.Max(c => VectorMath.Dot(normalized[i].Vector, c));
+            var nearest = centroids.Max(c => Vectors.Dot(normalized[i].Vector, c));
             if (nearest < lowestSimilarity)
             {
                 lowestSimilarity = nearest;

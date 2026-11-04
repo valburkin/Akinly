@@ -29,7 +29,7 @@ internal static class ClusterSample
             var memberSet = members[i].ToHashSet();
             var byProximity = normalized
                 .Where(n => memberSet.Contains(n.ItemId))
-                .Select(n => (n.ItemId, Similarity: VectorMath.Dot(n.Vector, centroids[i])))
+                .Select(n => (n.ItemId, Similarity: Vectors.Dot(n.Vector, centroids[i])))
                 .OrderByDescending(n => n.Similarity)
                 .Select(n => n.ItemId)
                 .ToArray();

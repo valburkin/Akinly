@@ -28,7 +28,7 @@ public sealed class GreedyCosineClusterer : IClusterer
 
         var centroids = new List<float[]>();
         var members = new List<List<TId>>();
-        var normalized = items.Select(i => (i.ItemId, Vector: VectorMath.Normalize(i.Embedding))).ToArray();
+        var normalized = items.Select(i => (i.ItemId, Vector: Vectors.Normalize(i.Embedding))).ToArray();
 
         foreach (var (itemId, vector) in normalized)
         {
@@ -36,7 +36,7 @@ public sealed class GreedyCosineClusterer : IClusterer
             var bestSimilarity = double.NegativeInfinity;
             for (var i = 0; i < centroids.Count; i++)
             {
-                var similarity = VectorMath.Dot(vector, centroids[i]);
+                var similarity = Vectors.Dot(vector, centroids[i]);
                 if (similarity > bestSimilarity)
                 {
                     bestSimilarity = similarity;
@@ -47,7 +47,7 @@ public sealed class GreedyCosineClusterer : IClusterer
             if (bestIndex >= 0 && bestSimilarity >= similarityThreshold)
             {
                 members[bestIndex].Add(itemId);
-                VectorMath.AddToMean(centroids[bestIndex], vector, members[bestIndex].Count);
+                Vectors.AddToMean(centroids[bestIndex], vector, members[bestIndex].Count);
             }
             else
             {
