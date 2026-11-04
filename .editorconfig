@@ -58,3 +58,11 @@ dotnet_diagnostic.CA2007.severity = warning
 
 # Multiline lists end with a trailing comma, so adding an item changes one line.
 resharper_trailing_comma_in_multiline_lists = true
+
+[tests/**.cs]
+# Tests run under xUnit, which has no synchronization context to deadlock on.
+dotnet_diagnostic.CA2007.severity = none
+# Test names are sentences: Snake_case_reads_as_what_is_being_proven.
+dotnet_diagnostic.CA1707.severity = none
+# A performance rule; tests deliberately use interface types.
+dotnet_diagnostic.CA1859.severity = none
