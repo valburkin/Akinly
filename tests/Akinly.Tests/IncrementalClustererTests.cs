@@ -77,4 +77,80 @@ public sealed class IncrementalClustererTests
         var tight = Enumerable.Range(0, 10).Select(i => new EmbeddedItem(i, Axis(0, 0.05f, 10 + (i % 5)))).ToList();
         Assert.Null(IncrementalClusterer.TrySplit(tight, 0.8, 0.85, 3));
     }
+
+    [Fact]
+    public void Members_of_parts_too_small_to_stand_alone_stay_with_the_largest_part()
+    {
+        var members = Enumerable.Range(0, 6).Select(i => new EmbeddedItem(i, Axis(0, 0.05f, 10 + i)))
+            .Concat(Enumerable.Range(10, 4).Select(i => new EmbeddedItem(i, Axis(1, 0.05f, i))))
+            .Append(new EmbeddedItem(99, Axis(2)))
+            .ToList();
+
+        var parts = IncrementalClusterer.TrySplit(members, cohesionThreshold: 0.8, regroupSimilarity: 0.85, minPartSize: 3);
+
+        Assert.NotNull(parts);
+        Assert.Equal([7, 4], parts.Select(p => p.ItemIds.Count));
+        Assert.Contains(99L, parts[0].ItemIds);
+        Assert.Equal(members.Count, parts.Sum(p => p.ItemIds.Count));
+    }
+
+    [Fact]
+    public void A_cluster_with_no_members_left_takes_its_next_member_as_its_centroid()
+    {
+        var item = Axis(1, 0.1f, 11);
+
+        var result = IncrementalClusterer.Assign([new ClusterState(7, Vectors.Normalize(item), 0)], [new EmbeddedItem(1, item)], 0.8);
+
+        var updated = Assert.Single(result.Updated);
+        Assert.Equal(1, updated.Count);
+        Assert.Equal(1.0, Vectors.Dot(updated.Centroid, Vectors.Normalize(item)), 6);
+    }
+
+    [Fact]
+    public void Zero_and_NaN_vectors_never_join_and_never_attract()
+    {
+        var nan = Axis(0);
+        nan[3] = float.NaN;
+        var existing = new[] { new ClusterState(100, Axis(0), 5) };
+
+        var result = IncrementalClusterer.Assign(
+            existing,
+            [
+                new EmbeddedItem(1, new float[16]),
+                new EmbeddedItem(2, nan),
+                new EmbeddedItem(3, Axis(0, 0.1f, 11)),
+            ],
+            joinSimilarity: 0.5);
+
+        Assert.Equal([3L], result.Joined.Keys);
+        Assert.Equal(100, result.Joined[3]);
+        Assert.Equal([1L, 2L], result.Created.Select(c => Assert.Single(c.ItemIds)));
+
+        // A broken centroid is never close enough to merge.
+        Assert.Empty(IncrementalClusterer.FindMerges([new ClusterState(1, nan, 3), new ClusterState(2, Axis(0), 3)], 0.5));
+    }
+
+    [Fact]
+    public void Cohesion_of_no_members_is_whole() =>
+        Assert.Equal(1.0, IncrementalClusterer.Cohesion([]));
+
+    [Fact]
+    public void Merges_over_given_pairs_match_the_full_check_when_the_pairs_hold_the_close_ones()
+    {
+        var clusters = new[]
+        {
+            new ClusterState(1, Axis(0), 3),
+            new ClusterState(2, Vectors.Normalize(Axis(0, 0.1f)), 9),
+            new ClusterState(3, Vectors.Normalize(Axis(0, 0.2f)), 4),
+            new ClusterState(4, Axis(5), 50),
+        };
+        var all = IncrementalClusterer.FindMerges(clusters, 0.95);
+
+        // Each changed cluster with its nearest neighbors, both ways, a cluster with itself,
+        // and a cluster that is not there.
+        var paired = IncrementalClusterer.FindMerges(clusters, [(1, 2), (2, 1), (3, 2), (1, 3), (2, 2), (3, 404), (4, 1)], 0.95);
+
+        Assert.Equal(all, paired);
+        Assert.Empty(IncrementalClusterer.FindMerges(clusters, [(1, 4), (3, 4)], 0.95));
+    }
 }

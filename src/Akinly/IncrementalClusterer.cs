@@ -1,11 +1,16 @@
 namespace Akinly;
 
 /// <summary>
-/// Incremental clustering with lasting cluster ids: new items are placed against clusters
-/// that already exist, of any age, so an item that comes back after months joins the cluster
-/// it had before; periodic merge and split checks repair what placement in arrival order gets
-/// wrong. Pure functions: the caller loads clusters and stores the results.
+/// Incremental clustering with lasting cluster ids: a greedy join-nearest-or-create loop over
+/// cosine similarity, applied to new items against clusters that already exist, of any age,
+/// so an item that comes back after months joins the cluster it had before; periodic merge
+/// and split checks repair what placement in arrival order gets wrong.
 /// </summary>
+/// <remarks>
+/// Pure functions: the caller loads clusters and stores the results, and may hand in only the
+/// clusters (or pairs) that can matter, such as each item's nearest clusters from a vector
+/// index, instead of every cluster.
+/// </remarks>
 public static class IncrementalClusterer
 {
     /// <summary>
@@ -76,7 +81,7 @@ public static class IncrementalClusterer
     /// The pairs of clusters close enough to be one, most similar first. Each cluster merges
     /// at most once per call, into the larger of the pair (on a tie, the one with the lower id).
     /// </summary>
-    /// <param name="clusters">The clusters to compare, every pair of them.</param>
+    /// <param name="clusters">The clusters to compare, every pair of them: O(n²).</param>
     /// <param name="mergeSimilarity">The cosine similarity of two centroids at or above which they merge.</param>
     public static IReadOnlyList<MergeDecision> FindMerges(IReadOnlyList<ClusterState> clusters, double mergeSimilarity)
     {
@@ -86,17 +91,68 @@ public static class IncrementalClusterer
         {
             for (var j = i + 1; j < clusters.Count; j++)
             {
-                var similarity = Vectors.Dot(clusters[i].Centroid, clusters[j].Centroid);
-                if (similarity < mergeSimilarity)
-                {
-                    continue;
-                }
-
-                var (into, from) = Larger(clusters[i], clusters[j]);
-                candidates.Add(new MergeDecision(from.Id, into.Id, similarity));
+                AddIfClose(candidates, clusters[i], clusters[j], mergeSimilarity);
             }
         }
 
+        return Pick(candidates);
+    }
+
+    /// <summary>
+    /// <see cref="FindMerges(IReadOnlyList{ClusterState}, double)"/> over the given pairs only,
+    /// by cluster id. A pair naming a cluster not in <paramref name="clusters"/>, a cluster
+    /// with itself, or the same pair twice is ignored. The decisions are the same as the
+    /// all-pairs check's whenever the pairs include every pair at or above
+    /// <paramref name="mergeSimilarity"/>.
+    /// </summary>
+    /// <param name="clusters">The clusters the pairs name.</param>
+    /// <param name="pairs">The candidate pairs, such as each changed cluster with its nearest neighbors.</param>
+    /// <param name="mergeSimilarity">The cosine similarity of two centroids at or above which they merge.</param>
+    public static IReadOnlyList<MergeDecision> FindMerges(
+        IReadOnlyList<ClusterState> clusters, IEnumerable<(long A, long B)> pairs, double mergeSimilarity)
+    {
+        ArgumentNullException.ThrowIfNull(clusters);
+        ArgumentNullException.ThrowIfNull(pairs);
+        var byId = new Dictionary<long, ClusterState>();
+        foreach (var cluster in clusters)
+        {
+            byId.TryAdd(cluster.Id, cluster);
+        }
+
+        var seen = new HashSet<(long, long)>();
+        var candidates = new List<MergeDecision>();
+        foreach (var (a, b) in pairs)
+        {
+            if (a == b || !seen.Add(a < b ? (a, b) : (b, a)))
+            {
+                continue;
+            }
+
+            if (byId.TryGetValue(a, out var x) && byId.TryGetValue(b, out var y))
+            {
+                AddIfClose(candidates, x, y, mergeSimilarity);
+            }
+        }
+
+        return Pick(candidates);
+    }
+
+    private static void AddIfClose(List<MergeDecision> candidates, ClusterState a, ClusterState b, double mergeSimilarity)
+    {
+        var similarity = Vectors.Dot(a.Centroid, b.Centroid);
+
+        // A NaN similarity (a broken centroid) is never close.
+        if (!(similarity >= mergeSimilarity))
+        {
+            return;
+        }
+
+        var (into, from) = Larger(a, b);
+        candidates.Add(new MergeDecision(from.Id, into.Id, similarity));
+    }
+
+    private static List<MergeDecision> Pick(List<MergeDecision> candidates)
+    {
         var used = new HashSet<long>();
         var merges = new List<MergeDecision>();
         foreach (var merge in candidates.OrderByDescending(m => m.Similarity).ThenBy(m => m.FromId))
