@@ -22,8 +22,16 @@ public static class IncrementalClusterer
     /// <param name="existing">The clusters that already exist.</param>
     /// <param name="items">The items to place, in order.</param>
     /// <param name="joinSimilarity">The cosine similarity at or above which an item joins a cluster.</param>
+    /// <param name="refused">
+    /// Whether an item may not join an existing cluster (item id, cluster id), because a judge
+    /// already refused it there; such a cluster is skipped as if it were not there. Null when
+    /// nothing was refused.
+    /// </param>
     public static AssignmentResult Assign(
-        IReadOnlyList<ClusterState> existing, IReadOnlyList<EmbeddedItem> items, double joinSimilarity)
+        IReadOnlyList<ClusterState> existing,
+        IReadOnlyList<EmbeddedItem> items,
+        double joinSimilarity,
+        Func<long, long, bool>? refused = null)
     {
         ArgumentNullException.ThrowIfNull(existing);
         ArgumentNullException.ThrowIfNull(items);
@@ -42,6 +50,11 @@ public static class IncrementalClusterer
             var bestSimilarity = double.NegativeInfinity;
             for (var i = 0; i < centroids.Count; i++)
             {
+                if (i < existing.Count && refused?.Invoke(item.Id, existing[i].Id) == true)
+                {
+                    continue;
+                }
+
                 var similarity = Vectors.Dot(vector, centroids[i]);
                 if (similarity > bestSimilarity)
                 {
@@ -75,6 +88,57 @@ public static class IncrementalClusterer
         var created = newMembers.Select((members, i) => new NewCluster(centroids[existing.Count + i], members)).ToList();
         var updated = touched.Order().Select(i => existing[i] with { Centroid = centroids[i], Count = counts[i] }).ToList();
         return new AssignmentResult(joined, created, updated);
+    }
+
+    /// <summary>
+    /// The cluster an item should be checked against before it may join, or null when
+    /// similarity alone decides. Similarity to the nearest cluster not yet refused falls in
+    /// one of three zones: at or above <paramref name="joinSimilarity"/> the item joins
+    /// unchecked; from <paramref name="checkSimilarity"/> up to it, a judge decides; below
+    /// it, the item starts its own cluster. An item refused <paramref name="maxChecks"/>
+    /// times starts its own too.
+    /// </summary>
+    /// <param name="embedding">The item's embedding.</param>
+    /// <param name="candidates">The clusters to consider, such as the item's nearest from a vector index.</param>
+    /// <param name="refused">The ids of the clusters that already refused this item.</param>
+    /// <param name="joinSimilarity">The similarity at or above which the item joins without a check.</param>
+    /// <param name="checkSimilarity">The similarity at or above which a judge is asked.</param>
+    /// <param name="maxChecks">How many refusals an item takes before it starts its own cluster.</param>
+    public static long? ClusterToCheck(
+        float[] embedding,
+        IReadOnlyList<ClusterState> candidates,
+        IReadOnlySet<long> refused,
+        double joinSimilarity,
+        double checkSimilarity,
+        int maxChecks)
+    {
+        ArgumentNullException.ThrowIfNull(embedding);
+        ArgumentNullException.ThrowIfNull(candidates);
+        ArgumentNullException.ThrowIfNull(refused);
+        if (refused.Count >= maxChecks)
+        {
+            return null;
+        }
+
+        var vector = Vectors.Normalize(embedding);
+        ClusterState? best = null;
+        var bestSimilarity = double.NegativeInfinity;
+        foreach (var candidate in candidates)
+        {
+            if (refused.Contains(candidate.Id))
+            {
+                continue;
+            }
+
+            var similarity = Vectors.Dot(vector, candidate.Centroid);
+            if (similarity > bestSimilarity)
+            {
+                bestSimilarity = similarity;
+                best = candidate;
+            }
+        }
+
+        return best is not null && bestSimilarity >= checkSimilarity && bestSimilarity < joinSimilarity ? best.Id : null;
     }
 
     /// <summary>

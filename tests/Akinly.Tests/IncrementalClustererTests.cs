@@ -153,4 +153,52 @@ public sealed class IncrementalClustererTests
         Assert.Equal(all, paired);
         Assert.Empty(IncrementalClusterer.FindMerges(clusters, [(1, 4), (3, 4)], 0.95));
     }
+
+    /// <summary>A unit vector in the plane at (<paramref name="a"/>, <paramref name="b"/>).</summary>
+    private static float[] Unit(double a, double b) => Vectors.Normalize([(float)a, (float)b]);
+
+    [Fact]
+    public void An_item_near_a_cluster_is_checked_against_it()
+    {
+        ClusterState[] clusters = [new(1, Unit(1, 0), 3), new(2, Unit(0, 1), 3)];
+
+        Assert.Equal(1L, IncrementalClusterer.ClusterToCheck(Unit(1, 0.8), clusters, new HashSet<long>(), 0.85, 0.62, 2));
+    }
+
+    [Fact]
+    public void An_item_certainly_in_a_cluster_needs_no_check()
+    {
+        ClusterState[] clusters = [new(1, Unit(1, 0), 3)];
+
+        Assert.Null(IncrementalClusterer.ClusterToCheck(Unit(1, 0.1), clusters, new HashSet<long>(), 0.85, 0.62, 2));
+    }
+
+    [Fact]
+    public void An_item_far_from_every_cluster_needs_no_check()
+    {
+        ClusterState[] clusters = [new(1, Unit(1, 0), 3)];
+
+        Assert.Null(IncrementalClusterer.ClusterToCheck(Unit(0.1, 1), clusters, new HashSet<long>(), 0.85, 0.62, 2));
+    }
+
+    [Fact]
+    public void A_refused_item_is_checked_against_the_next_nearest_then_starts_its_own()
+    {
+        ClusterState[] clusters = [new(1, Unit(1, 0), 3), new(2, Unit(0.9, 1), 3)];
+        var item = Unit(1, 0.7);
+
+        Assert.Equal(2L, IncrementalClusterer.ClusterToCheck(item, clusters, new HashSet<long> { 1 }, 0.99, 0.62, 2));
+        Assert.Null(IncrementalClusterer.ClusterToCheck(item, clusters, new HashSet<long> { 1, 2 }, 0.99, 0.62, 2));
+    }
+
+    [Fact]
+    public void Assign_skips_a_cluster_that_refused_the_item()
+    {
+        ClusterState[] clusters = [new(1, Unit(1, 0), 3)];
+
+        var result = IncrementalClusterer.Assign(clusters, [new EmbeddedItem(9, Unit(1, 0.1))], 0.8, (item, cluster) => item == 9 && cluster == 1);
+
+        Assert.Empty(result.Joined);
+        Assert.Single(result.Created);
+    }
 }
