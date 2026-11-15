@@ -1,0 +1,28 @@
+name: Clustering quality
+description: Items that belong together were kept apart, or different ones were put together.
+labels: [quality]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Clustering quality depends on the embedding model, the thresholds and the judge, so please name all three. Use made-up texts that show the same problem, never private data.
+  - type: textarea
+    id: example
+    attributes:
+      label: The items and what you expected
+      description: The texts (made up), the clusters they landed in, and where you expected them.
+    validations:
+      required: true
+  - type: textarea
+    id: setup
+    attributes:
+      label: Embedding model, thresholds and judge
+      description: For example "text-embedding-3-small with the default thresholds, a local Ollama judge".
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Akinly version or commit
+    validations:
+      required: true

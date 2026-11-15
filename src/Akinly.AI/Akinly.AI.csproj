@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <PackageId>Akinly.AI</PackageId>
+    <Description>Akinly with any language model through Microsoft.Extensions.AI: a judge that decides close calls, a labeler that titles clusters, and a text clusterer that embeds texts for you. Works with local models (Ollama) and cloud ones alike.</Description>
+    <PackageTags>$(PackageTags);ai;microsoft-extensions-ai;ollama;openai</PackageTags>
+    <IsPackable>true</IsPackable>
+    <!-- Transitive pinning would turn every centrally pinned package this project pulls in
+         into a dependency of the package; a package declares only what it references. -->
+    <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
+    <EnablePackageValidation>true</EnablePackageValidation>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.AI.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Akinly\Akinly.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The package's page on nuget.org: its own README, linking to the full docs. -->
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+</Project>

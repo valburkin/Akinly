@@ -1,0 +1,41 @@
+#nullable enable
+Akinly.VectorData.VectorDataClusterStore
+Akinly.VectorData.VectorDataClusterStore.ApplyAsync(Akinly.Storage.ChangeSet! changes, long expectedVersion, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+Akinly.VectorData.VectorDataClusterStore.GetChangedClustersAsync(long afterId, int count, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Akinly.Storage.StoredCluster!>!>!
+Akinly.VectorData.VectorDataClusterStore.GetClustersAsync(System.Collections.Generic.IEnumerable<long>! ids, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Akinly.Storage.StoredCluster!>!>!
+Akinly.VectorData.VectorDataClusterStore.GetExamplesAsync(long clusterId, int count, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<string!>!>!
+Akinly.VectorData.VectorDataClusterStore.GetInfoAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<Akinly.Storage.StoreInfo!>!
+Akinly.VectorData.VectorDataClusterStore.GetItemsAsync(System.Collections.Generic.IEnumerable<string!>! ids, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Akinly.Storage.StoredItem!>!>!
+Akinly.VectorData.VectorDataClusterStore.GetMembersAsync(long clusterId, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Akinly.Storage.StoredItem!>!>!
+Akinly.VectorData.VectorDataClusterStore.GetMergeChecksAsync(System.Collections.Generic.IEnumerable<(long ClusterId, long OtherClusterId)>! pairs, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Akinly.Storage.MergeCheck!>!>!
+Akinly.VectorData.VectorDataClusterStore.GetOpenQuestionsAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Akinly.Storage.StoredQuestion!>!>!
+Akinly.VectorData.VectorDataClusterStore.GetQuestionsAsync(System.Collections.Generic.IEnumerable<Akinly.QuestionId>! ids, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Akinly.Storage.StoredQuestion!>!>!
+Akinly.VectorData.VectorDataClusterStore.GetWaitingItemsAsync(int count, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Akinly.Storage.StoredItem!>!>!
+Akinly.VectorData.VectorDataClusterStore.ListClustersAsync(System.Threading.CancellationToken cancellationToken) -> System.Collections.Generic.IAsyncEnumerable<Akinly.Storage.StoredCluster!>!
+Akinly.VectorData.VectorDataClusterStore.NearestClustersAsync(System.ReadOnlyMemory<float> vector, int count, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Akinly.Storage.ClusterNeighbor>!>!
+Akinly.VectorData.VectorDataClusterStore.VectorDataClusterStore(Microsoft.Extensions.VectorData.VectorStore! store, Akinly.VectorData.VectorDataClusterStoreOptions! options) -> void
+Akinly.VectorData.VectorDataClusterStoreOptions
+Akinly.VectorData.VectorDataClusterStoreOptions.Clone() -> Akinly.VectorData.VectorDataClusterStoreOptions!
+Akinly.VectorData.VectorDataClusterStoreOptions.CollectionPrefix.get -> string!
+Akinly.VectorData.VectorDataClusterStoreOptions.CollectionPrefix.set -> void
+Akinly.VectorData.VectorDataClusterStoreOptions.Dimensions.get -> int
+Akinly.VectorData.VectorDataClusterStoreOptions.Dimensions.set -> void
+Akinly.VectorData.VectorDataClusterStoreOptions.DistanceFunction.get -> string!
+Akinly.VectorData.VectorDataClusterStoreOptions.DistanceFunction.set -> void
+Akinly.VectorData.VectorDataClusterStoreOptions.IndexKind.get -> string?
+Akinly.VectorData.VectorDataClusterStoreOptions.IndexKind.set -> void
+Akinly.VectorData.VectorDataClusterStoreOptions.KeyKind.get -> Akinly.VectorData.VectorDataKeyKind
+Akinly.VectorData.VectorDataClusterStoreOptions.KeyKind.set -> void
+Akinly.VectorData.VectorDataClusterStoreOptions.NameSeparator.get -> string!
+Akinly.VectorData.VectorDataClusterStoreOptions.NameSeparator.set -> void
+Akinly.VectorData.VectorDataClusterStoreOptions.PageSize.get -> int
+Akinly.VectorData.VectorDataClusterStoreOptions.PageSize.set -> void
+Akinly.VectorData.VectorDataClusterStoreOptions.SearchOversampling.get -> int
+Akinly.VectorData.VectorDataClusterStoreOptions.SearchOversampling.set -> void
+Akinly.VectorData.VectorDataClusterStoreOptions.Validate() -> System.Collections.Generic.IReadOnlyList<string!>!
+Akinly.VectorData.VectorDataClusterStoreOptions.VectorDataClusterStoreOptions() -> void
+Akinly.VectorData.VectorDataKeyKind
+Akinly.VectorData.VectorDataKeyKind.Text = 1 -> Akinly.VectorData.VectorDataKeyKind
+Akinly.VectorData.VectorDataKeyKind.Uuid = 0 -> Akinly.VectorData.VectorDataKeyKind
+Microsoft.Extensions.DependencyInjection.AkinlyVectorDataBuilderExtensions
+static Microsoft.Extensions.DependencyInjection.AkinlyVectorDataBuilderExtensions.UseVectorStore(this Microsoft.Extensions.DependencyInjection.AkinlyBuilder! builder, System.Action<Akinly.VectorData.VectorDataClusterStoreOptions!>! configure, object? vectorStoreKey = null) -> Microsoft.Extensions.DependencyInjection.AkinlyBuilder!

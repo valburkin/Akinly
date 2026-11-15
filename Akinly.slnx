@@ -1,8 +1,19 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/Akinly/Akinly.csproj" />
+    <Project Path="src/Akinly.AI/Akinly.AI.csproj" />
+    <Project Path="src/Akinly.VectorData/Akinly.VectorData.csproj" />
+  </Folder>
+  <Folder Name="/benchmarks/">
+    <Project Path="benchmarks/Akinly.Benchmarks/Akinly.Benchmarks.csproj" />
+  </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/Akinly.Evaluation/Akinly.Evaluation.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Akinly.Tests/Akinly.Tests.csproj" />
+    <Project Path="tests/Akinly.AI.Tests/Akinly.AI.Tests.csproj" />
+    <Project Path="tests/Akinly.VectorData.Tests/Akinly.VectorData.Tests.csproj" />
+    <Project Path="tests/Akinly.Evaluation.Tests/Akinly.Evaluation.Tests.csproj" />
   </Folder>
 </Solution>

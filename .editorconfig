@@ -59,6 +59,17 @@ dotnet_diagnostic.CA2007.severity = warning
 # Multiline lists end with a trailing comma, so adding an item changes one line.
 resharper_trailing_comma_in_multiline_lists = true
 
+# The public API analyzer (PublicAPI.*.txt) records every change to the public API. Its rule
+# against several overloads with optional parameters is off: like the .NET libraries, each
+# overload here takes an optional CancellationToken or configure callback, and the overloads
+# differ in their required parameters, so a call never binds to a different one.
+dotnet_diagnostic.RS0026.severity = none
+
+[src/*/DependencyInjection/*.cs]
+# Registration extensions live in Microsoft.Extensions.DependencyInjection, by convention, so
+# AddAkinly shows up wherever services are configured.
+dotnet_diagnostic.IDE0130.severity = none
+
 [tests/**.cs]
 # Tests run under xUnit, which has no synchronization context to deadlock on.
 dotnet_diagnostic.CA2007.severity = none
@@ -66,3 +77,11 @@ dotnet_diagnostic.CA2007.severity = none
 dotnet_diagnostic.CA1707.severity = none
 # A performance rule; tests deliberately use interface types.
 dotnet_diagnostic.CA1859.severity = none
+# Tests call the library against in-memory stores and finish in milliseconds; passing the
+# test's cancellation token to every call would only add noise. Tests of cancellation pass
+# their own tokens.
+dotnet_diagnostic.xUnit1051.severity = none
+
+[{tools,benchmarks}/**.cs]
+# Console hosts, not libraries: there is no synchronization context to deadlock on.
+dotnet_diagnostic.CA2007.severity = none

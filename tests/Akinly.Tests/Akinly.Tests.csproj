@@ -16,6 +16,19 @@
     <PackageReference Include="xunit.v3" />
   </ItemGroup>
 
+  <!-- Code coverage, collected when the tests run with the coverage option (CONTRIBUTING.md). -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage" />
+  </ItemGroup>
+
+  <!-- Property-based tests: generated operation sequences prove the clusterer's invariants
+       over many cases instead of a handful of examples. -->
+  <ItemGroup>
+    <PackageReference Include="CsCheck" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+  </ItemGroup>
+
   <ItemGroup>
     <Using Include="Xunit" />
   </ItemGroup>

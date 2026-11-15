@@ -1,0 +1,116 @@
+# Build, test and pack every change, on Linux and Windows. Every action is pinned to a
+# commit, with its version in a comment (Dependabot updates both).
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  # Weekly, so a vulnerability published against a pinned package fails the build even
+  # when nothing in the repository changed.
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A newer push to a pull request replaces its run; runs on main always finish.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  DOTNET_NOLOGO: "true"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "true"
+  # Every restore, implicit ones included, installs exactly what the lock files list.
+  RestoreLockedMode: "true"
+
+jobs:
+  dotnet:
+    name: .NET on ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    env:
+      # The vector store's contract tests against Qdrant and PostgreSQL run in Linux containers,
+      # so only on the Linux leg; elsewhere they are skipped.
+      AKINLY_CONTAINERS: ${{ matrix.os == 'ubuntu-latest' && '1' || '' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          global-json-file: global.json
+      # Restore installs exactly the lock files' packages and audits every one of them,
+      # transitive ones included; a known vulnerability is an error (Directory.Build.props).
+      - run: dotnet restore Akinly.slnx --locked-mode
+      # Analyzers, code style and missing XML comments are errors too.
+      - run: dotnet build Akinly.slnx --configuration Release --no-restore
+      # Microsoft.Testing.Platform: options after "--" go to the test app.
+      # Each test project writes its own report (the default, uniquely named), merged below.
+      - run: dotnet test Akinly.slnx --configuration Release --no-build -- --coverage --coverage-output-format cobertura
+      # The coverage floor, on the whole library: a change that lowers line or branch coverage
+      # below it fails here. Coverage doesn't depend on the OS, so one leg checks it.
+      - name: Check coverage
+        if: runner.os == 'Linux'
+        shell: bash
+        env:
+          MIN_LINE: "0.95"
+          MIN_BRANCH: "0.90"
+        run: python3 .github/scripts/check_coverage.py TestResults
+      - run: dotnet pack Akinly.slnx --configuration Release --no-build --output artifacts
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: matrix.os == 'ubuntu-latest'
+        with:
+          name: packages
+          path: artifacts/
+          if-no-files-found: error
+
+  # A release tag that passed the build pushes the package the build job tested and packed
+  # (not a rebuild) to nuget.org with Trusted Publishing: GitHub's OIDC token is exchanged
+  # for a key that lives an hour, so no API key is stored anywhere. nuget.org can't delete a
+  # version, so the "nuget" environment must require a reviewer's approval, and tags matching
+  # v* must be protected (repository settings).
+  publish:
+    name: Publish to nuget.org
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [dotnet]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: nuget
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: packages
+          path: artifacts
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          dotnet-version: "10.0.x"
+      # A tag must push the version it names, never another one.
+      - name: Check the package's version
+        shell: bash
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          test -f "artifacts/Akinly.${TAG#v}.nupkg" || { echo "The package isn't version ${TAG#v}; set it in Directory.Build.props." >&2; exit 1; }
+      - name: Log in to nuget.org
+        id: nuget
+        uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841 # v1.2.0
+        with:
+          user: ${{ vars.NUGET_USER }}
+      # Each .nupkg is pushed with its .snupkg. The key goes through the environment, never
+      # into the script's text.
+      - name: Push the package
+        env:
+          NUGET_API_KEY: ${{ steps.nuget.outputs.NUGET_API_KEY }}
+        run: dotnet nuget push "artifacts/*.nupkg" --source https://api.nuget.org/v3/index.json --api-key "$NUGET_API_KEY" --skip-duplicate

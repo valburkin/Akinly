@@ -41,8 +41,11 @@ public sealed class IncrementalClustererTests
         var a = IncrementalClusterer.Assign([], items, 0.8);
         var b = IncrementalClusterer.Assign([], items, 0.8);
 
-        Assert.Equal(a.Created.Select(c => c.ItemIds.ToArray()), b.Created.Select(c => c.ItemIds.ToArray()));
-        Assert.Equal(3, a.Created.Count);
+        // The groups are known in advance (one per axis), in the order their first members came.
+        long[][] expected = [.. Enumerable.Range(0, 3).Select(axis => items.Where(i => i.Id % 3 == axis).Select(i => i.Id).ToArray())];
+        Assert.Equal(expected, a.Created.Select(c => c.ItemIds.ToArray()));
+        Assert.Equal(expected, b.Created.Select(c => c.ItemIds.ToArray()));
+        Assert.Equal(a.Created.Select(c => c.Centroid), b.Created.Select(c => c.Centroid));
     }
 
     [Fact]
@@ -58,8 +61,10 @@ public sealed class IncrementalClustererTests
 
         var merge = Assert.Single(IncrementalClusterer.FindMerges(clusters, 0.95));
 
+        // 2 and 3 are the closest pair (0.9952 against 0.9950 for 1 and 2); once 2 has merged,
+        // 1 may not merge into it in the same call.
         Assert.Equal(2, merge.IntoId);
-        Assert.Contains(merge.FromId, new long[] { 1, 3 });
+        Assert.Equal(3, merge.FromId);
     }
 
     [Fact]
@@ -189,6 +194,20 @@ public sealed class IncrementalClustererTests
 
         Assert.Equal(2L, IncrementalClusterer.ClusterToCheck(item, clusters, new HashSet<long> { 1 }, 0.99, 0.62, 2));
         Assert.Null(IncrementalClusterer.ClusterToCheck(item, clusters, new HashSet<long> { 1, 2 }, 0.99, 0.62, 2));
+    }
+
+    [Fact]
+    public void An_item_a_judge_accepted_joins_however_far_it_is()
+    {
+        var cluster = new ClusterState(1, Unit(1, 0), 3);
+
+        var joined = IncrementalClusterer.Join(cluster, new EmbeddedItem(9, Unit(1, 1)));
+
+        Assert.Equal(1, joined.Id);
+        Assert.Equal(4, joined.Count);
+        Assert.Equal(1.0, Vectors.Dot(joined.Centroid, joined.Centroid), 6);
+        Assert.True(Vectors.Dot(joined.Centroid, Unit(1, 1)) > Vectors.Dot(cluster.Centroid, Unit(1, 1)));
+        Assert.Equal(3, cluster.Count);
     }
 
     [Fact]

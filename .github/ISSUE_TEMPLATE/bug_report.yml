@@ -1,0 +1,32 @@
+name: Bug report
+description: Something does not work as documented.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use made-up texts and vectors only, never private data. A security problem goes through [private reporting](https://github.com/valburkin/Akinly/security/advisories/new) instead.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what you expected
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: How to reproduce it
+      description: The smallest code that shows it, with the items, clusters and options it needs.
+      render: csharp
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Akinly version or commit
+    validations:
+      required: true
+  - type: input
+    id: runtime
+    attributes:
+      label: .NET version and operating system

@@ -23,4 +23,25 @@
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
   </PropertyGroup>
 
+  <!-- Package metadata for the libraries under src/. -->
+  <PropertyGroup>
+    <Version>1.0.0</Version>
+    <Authors>Valentin Burkin</Authors>
+    <Copyright>Copyright (c) 2026 Valentin Burkin</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/valburkin/Akinly</PackageProjectUrl>
+    <PackageReleaseNotes>https://github.com/valburkin/Akinly/blob/main/CHANGELOG.md</PackageReleaseNotes>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageTags>clustering;text-clustering;embeddings;semantic;llm;deduplication;incremental</PackageTags>
+    <RepositoryUrl>https://github.com/valburkin/Akinly</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <!-- Debug symbols go to nuget.org's symbol server as a .snupkg; Source Link (in the SDK)
+         points them at this repository's sources at the packed commit. -->
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <!-- Paths in the binaries and symbols don't depend on the machine that builds them, so a
+         package never carries a local path: on for CI and for every Release build. -->
+    <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true' or '$(Configuration)' == 'Release'">true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+
 </Project>

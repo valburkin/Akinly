@@ -1,0 +1,643 @@
+#nullable enable
+abstract Akinly.Question.<Clone>$() -> Akinly.Question!
+Akinly.AssignmentResult
+Akinly.AssignmentResult.<Clone>$() -> Akinly.AssignmentResult!
+Akinly.AssignmentResult.AssignmentResult(System.Collections.Generic.IReadOnlyDictionary<long, long>! Joined, System.Collections.Generic.IReadOnlyList<Akinly.NewCluster!>! Created, System.Collections.Generic.IReadOnlyList<Akinly.ClusterState!>! Updated) -> void
+Akinly.AssignmentResult.Created.get -> System.Collections.Generic.IReadOnlyList<Akinly.NewCluster!>!
+Akinly.AssignmentResult.Created.init -> void
+Akinly.AssignmentResult.Deconstruct(out System.Collections.Generic.IReadOnlyDictionary<long, long>! Joined, out System.Collections.Generic.IReadOnlyList<Akinly.NewCluster!>! Created, out System.Collections.Generic.IReadOnlyList<Akinly.ClusterState!>! Updated) -> void
+Akinly.AssignmentResult.Equals(Akinly.AssignmentResult? other) -> bool
+Akinly.AssignmentResult.Joined.get -> System.Collections.Generic.IReadOnlyDictionary<long, long>!
+Akinly.AssignmentResult.Joined.init -> void
+Akinly.AssignmentResult.Updated.get -> System.Collections.Generic.IReadOnlyList<Akinly.ClusterState!>!
+Akinly.AssignmentResult.Updated.init -> void
+Akinly.Cluster
+Akinly.Cluster.<Clone>$() -> Akinly.Cluster!
+Akinly.Cluster.Centroid.get -> System.ReadOnlyMemory<float>
+Akinly.Cluster.Centroid.init -> void
+Akinly.Cluster.Cluster(long Id, int Count, string? Label, System.ReadOnlyMemory<float> Centroid, int LabeledAtCount = 0) -> void
+Akinly.Cluster.Count.get -> int
+Akinly.Cluster.Count.init -> void
+Akinly.Cluster.Deconstruct(out long Id, out int Count, out string? Label, out System.ReadOnlyMemory<float> Centroid, out int LabeledAtCount) -> void
+Akinly.Cluster.Equals(Akinly.Cluster? other) -> bool
+Akinly.Cluster.Id.get -> long
+Akinly.Cluster.Id.init -> void
+Akinly.Cluster.Label.get -> string?
+Akinly.Cluster.Label.init -> void
+Akinly.Cluster.LabeledAtCount.get -> int
+Akinly.Cluster.LabeledAtCount.init -> void
+Akinly.Clusterer
+Akinly.Clusterer.AddAsync(System.Collections.Generic.IEnumerable<Akinly.ClusterItem!>! items, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Akinly.ClusteringStep!>!
+Akinly.Clusterer.AnswerAsync(System.Collections.Generic.IEnumerable<Akinly.Verdict>! verdicts, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Akinly.ClusteringStep!>!
+Akinly.Clusterer.Clusterer(Akinly.Storage.IClusterStore! store, Akinly.ClusteringOptions! options, Microsoft.Extensions.Logging.ILogger<Akinly.Clusterer!>? logger = null, Akinly.IMergePolicy? mergePolicy = null) -> void
+Akinly.Clusterer.GetClusterAsync(long clusterId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Akinly.Cluster?>!
+Akinly.Clusterer.GetClusterOfAsync(string! itemId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<long?>!
+Akinly.Clusterer.GetMembersAsync(long clusterId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<string!>!>!
+Akinly.Clusterer.GetOpenQuestionsAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Akinly.Question!>!>!
+Akinly.Clusterer.ListClustersAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Akinly.Cluster!>!
+Akinly.Clusterer.MaintainAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Akinly.ClusteringStep!>!
+Akinly.Clusterer.Options.get -> Akinly.ClusteringOptions!
+Akinly.Clusterer.RemoveAsync(System.Collections.Generic.IEnumerable<string!>! itemIds, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Akinly.Clusterer.SetLabelAsync(long clusterId, string? label, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
+Akinly.Clusterer.Store.get -> Akinly.Storage.IClusterStore!
+Akinly.ClustererExtensions
+Akinly.ClusteringOptions
+Akinly.ClusteringOptions.CandidateClusters.get -> int
+Akinly.ClusteringOptions.CandidateClusters.set -> void
+Akinly.ClusteringOptions.CheckSimilarity.get -> double
+Akinly.ClusteringOptions.CheckSimilarity.set -> void
+Akinly.ClusteringOptions.Clone() -> Akinly.ClusteringOptions!
+Akinly.ClusteringOptions.ClusteringOptions() -> void
+Akinly.ClusteringOptions.EmbeddingModel.get -> string!
+Akinly.ClusteringOptions.EmbeddingModel.set -> void
+Akinly.ClusteringOptions.ExamplesPerQuestion.get -> int
+Akinly.ClusteringOptions.ExamplesPerQuestion.set -> void
+Akinly.ClusteringOptions.FailedAnswers.get -> Akinly.FailedAnswerOptions!
+Akinly.ClusteringOptions.FailedAnswers.set -> void
+Akinly.ClusteringOptions.HasAskZone.get -> bool
+Akinly.ClusteringOptions.JoinChoices.get -> int
+Akinly.ClusteringOptions.JoinChoices.set -> void
+Akinly.ClusteringOptions.JoinSimilarity.get -> double
+Akinly.ClusteringOptions.JoinSimilarity.set -> void
+Akinly.ClusteringOptions.MaxChecksPerItem.get -> int
+Akinly.ClusteringOptions.MaxChecksPerItem.set -> void
+Akinly.ClusteringOptions.MaxClustersPerMaintain.get -> int
+Akinly.ClusteringOptions.MaxClustersPerMaintain.set -> void
+Akinly.ClusteringOptions.MaxOpenQuestions.get -> int
+Akinly.ClusteringOptions.MaxOpenQuestions.set -> void
+Akinly.ClusteringOptions.MergeCheckSimilarity.get -> double
+Akinly.ClusteringOptions.MergeCheckSimilarity.set -> void
+Akinly.ClusteringOptions.MergeExamplesPerCluster.get -> int
+Akinly.ClusteringOptions.MergeExamplesPerCluster.set -> void
+Akinly.ClusteringOptions.MergeRespectsRefusals.get -> bool
+Akinly.ClusteringOptions.MergeRespectsRefusals.set -> void
+Akinly.ClusteringOptions.MergeSimilarity.get -> double
+Akinly.ClusteringOptions.MergeSimilarity.set -> void
+Akinly.ClusteringOptions.Split.get -> Akinly.SplitOptions!
+Akinly.ClusteringOptions.Split.set -> void
+Akinly.ClusteringOptions.ThrowIfInvalid() -> void
+Akinly.ClusteringOptions.Validate() -> System.Collections.Generic.IReadOnlyList<string!>!
+Akinly.ClusteringStep
+Akinly.ClusteringStep.<Clone>$() -> Akinly.ClusteringStep!
+Akinly.ClusteringStep.ClusteringStep(System.Collections.Generic.IReadOnlyList<Akinly.Placement>! Placements, System.Collections.Generic.IReadOnlyList<Akinly.ClusterMerge>! Merges, System.Collections.Generic.IReadOnlyList<Akinly.ClusterSplit!>! Splits, System.Collections.Generic.IReadOnlyList<Akinly.Question!>! Questions) -> void
+Akinly.ClusteringStep.Deconstruct(out System.Collections.Generic.IReadOnlyList<Akinly.Placement>! Placements, out System.Collections.Generic.IReadOnlyList<Akinly.ClusterMerge>! Merges, out System.Collections.Generic.IReadOnlyList<Akinly.ClusterSplit!>! Splits, out System.Collections.Generic.IReadOnlyList<Akinly.Question!>! Questions) -> void
+Akinly.ClusteringStep.Equals(Akinly.ClusteringStep? other) -> bool
+Akinly.ClusteringStep.Merges.get -> System.Collections.Generic.IReadOnlyList<Akinly.ClusterMerge>!
+Akinly.ClusteringStep.Merges.init -> void
+Akinly.ClusteringStep.Placements.get -> System.Collections.Generic.IReadOnlyList<Akinly.Placement>!
+Akinly.ClusteringStep.Placements.init -> void
+Akinly.ClusteringStep.Questions.get -> System.Collections.Generic.IReadOnlyList<Akinly.Question!>!
+Akinly.ClusteringStep.Questions.init -> void
+Akinly.ClusteringStep.Splits.get -> System.Collections.Generic.IReadOnlyList<Akinly.ClusterSplit!>!
+Akinly.ClusteringStep.Splits.init -> void
+Akinly.ClusteringStep.Then(Akinly.ClusteringStep! next) -> Akinly.ClusteringStep!
+Akinly.ClusterItem
+Akinly.ClusterItem.<Clone>$() -> Akinly.ClusterItem!
+Akinly.ClusterItem.ClusterItem(string! Id, System.ReadOnlyMemory<float> Embedding) -> void
+Akinly.ClusterItem.Deconstruct(out string! Id, out System.ReadOnlyMemory<float> Embedding) -> void
+Akinly.ClusterItem.Embedding.get -> System.ReadOnlyMemory<float>
+Akinly.ClusterItem.Embedding.init -> void
+Akinly.ClusterItem.Equals(Akinly.ClusterItem? other) -> bool
+Akinly.ClusterItem.Id.get -> string!
+Akinly.ClusterItem.Id.init -> void
+Akinly.ClusterMerge
+Akinly.ClusterMerge.ClusterMerge() -> void
+Akinly.ClusterMerge.ClusterMerge(long FromId, long IntoId, Akinly.PlacementReason Reason) -> void
+Akinly.ClusterMerge.Deconstruct(out long FromId, out long IntoId, out Akinly.PlacementReason Reason) -> void
+Akinly.ClusterMerge.Equals(Akinly.ClusterMerge other) -> bool
+Akinly.ClusterMerge.FromId.get -> long
+Akinly.ClusterMerge.FromId.init -> void
+Akinly.ClusterMerge.IntoId.get -> long
+Akinly.ClusterMerge.IntoId.init -> void
+Akinly.ClusterMerge.Reason.get -> Akinly.PlacementReason
+Akinly.ClusterMerge.Reason.init -> void
+Akinly.ClusterSplit
+Akinly.ClusterSplit.<Clone>$() -> Akinly.ClusterSplit!
+Akinly.ClusterSplit.ClusterId.get -> long
+Akinly.ClusterSplit.ClusterId.init -> void
+Akinly.ClusterSplit.ClusterSplit(long ClusterId, System.Collections.Generic.IReadOnlyList<long>! NewClusterIds) -> void
+Akinly.ClusterSplit.Deconstruct(out long ClusterId, out System.Collections.Generic.IReadOnlyList<long>! NewClusterIds) -> void
+Akinly.ClusterSplit.Equals(Akinly.ClusterSplit? other) -> bool
+Akinly.ClusterSplit.NewClusterIds.get -> System.Collections.Generic.IReadOnlyList<long>!
+Akinly.ClusterSplit.NewClusterIds.init -> void
+Akinly.ClusterState
+Akinly.ClusterState.<Clone>$() -> Akinly.ClusterState!
+Akinly.ClusterState.Centroid.get -> float[]!
+Akinly.ClusterState.Centroid.init -> void
+Akinly.ClusterState.ClusterState(long Id, float[]! Centroid, int Count) -> void
+Akinly.ClusterState.Count.get -> int
+Akinly.ClusterState.Count.init -> void
+Akinly.ClusterState.Deconstruct(out long Id, out float[]! Centroid, out int Count) -> void
+Akinly.ClusterState.Equals(Akinly.ClusterState? other) -> bool
+Akinly.ClusterState.Id.get -> long
+Akinly.ClusterState.Id.init -> void
+Akinly.DelegateJudge
+Akinly.DelegateJudge.DelegateJudge(System.Func<Akinly.Question!, Akinly.VerdictKind>! answer) -> void
+Akinly.DelegateJudge.DelegateJudge(System.Func<Akinly.Question!, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<Akinly.VerdictKind>>! answer) -> void
+Akinly.DelegateJudge.DelegateJudge(System.Func<Akinly.Question!, Akinly.Verdict>! answer) -> void
+Akinly.DelegateJudge.DelegateJudge(System.Func<Akinly.Question!, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<Akinly.Verdict>>! answer) -> void
+Akinly.DelegateJudge.JudgeAsync(System.Collections.Generic.IReadOnlyList<Akinly.Question!>! questions, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Akinly.Verdict>!>!
+Akinly.DelegateMergePolicy
+Akinly.DelegateMergePolicy.DecideAsync(Akinly.Cluster! first, Akinly.Cluster! second, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<Akinly.MergeRule>
+Akinly.DelegateMergePolicy.DelegateMergePolicy(System.Func<Akinly.Cluster!, Akinly.Cluster!, Akinly.MergeRule>! decide) -> void
+Akinly.DelegateMergePolicy.DelegateMergePolicy(System.Func<Akinly.Cluster!, Akinly.Cluster!, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<Akinly.MergeRule>>! decide) -> void
+Akinly.EmbeddedItem
+Akinly.EmbeddedItem.Deconstruct(out long Id, out float[]! Embedding) -> void
+Akinly.EmbeddedItem.EmbeddedItem() -> void
+Akinly.EmbeddedItem.EmbeddedItem(long Id, float[]! Embedding) -> void
+Akinly.EmbeddedItem.Embedding.get -> float[]!
+Akinly.EmbeddedItem.Embedding.init -> void
+Akinly.EmbeddedItem.Equals(Akinly.EmbeddedItem other) -> bool
+Akinly.EmbeddedItem.Id.get -> long
+Akinly.EmbeddedItem.Id.init -> void
+Akinly.FailedAnswerOptions
+Akinly.FailedAnswerOptions.FailedAnswerOptions() -> void
+Akinly.FailedAnswerOptions.MaxAttempts.get -> int
+Akinly.FailedAnswerOptions.MaxAttempts.set -> void
+Akinly.FailedAnswerOptions.RetryDelay.get -> System.TimeSpan
+Akinly.FailedAnswerOptions.RetryDelay.set -> void
+Akinly.IClusterJudge
+Akinly.IClusterJudge.JudgeAsync(System.Collections.Generic.IReadOnlyList<Akinly.Question!>! questions, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Akinly.Verdict>!>!
+Akinly.IItemTextSource
+Akinly.IItemTextSource.GetTextAsync(string! itemId, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<string?>
+Akinly.IItemTextStore
+Akinly.IItemTextStore.RemoveTextAsync(string! itemId, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<bool>
+Akinly.IItemTextStore.SetTextAsync(string! itemId, string! text, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask
+Akinly.IMergePolicy
+Akinly.IMergePolicy.DecideAsync(Akinly.Cluster! first, Akinly.Cluster! second, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<Akinly.MergeRule>
+Akinly.IncrementalClusterer
+Akinly.InMemoryItemTextStore
+Akinly.InMemoryItemTextStore.Count.get -> int
+Akinly.InMemoryItemTextStore.GetTextAsync(string! itemId, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<string?>
+Akinly.InMemoryItemTextStore.InMemoryItemTextStore() -> void
+Akinly.InMemoryItemTextStore.Remove(string! itemId) -> bool
+Akinly.InMemoryItemTextStore.RemoveTextAsync(string! itemId, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<bool>
+Akinly.InMemoryItemTextStore.Set(string! itemId, string! text) -> void
+Akinly.InMemoryItemTextStore.SetTextAsync(string! itemId, string! text, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask
+Akinly.JoinChoice
+Akinly.JoinChoice.<Clone>$() -> Akinly.JoinChoice!
+Akinly.JoinChoice.ClusterId.get -> long
+Akinly.JoinChoice.ClusterId.init -> void
+Akinly.JoinChoice.ClusterLabel.get -> string?
+Akinly.JoinChoice.ClusterLabel.init -> void
+Akinly.JoinChoice.Deconstruct(out long ClusterId, out double Similarity, out string? ClusterLabel, out System.Collections.Generic.IReadOnlyList<string!>! ExampleItemIds) -> void
+Akinly.JoinChoice.Equals(Akinly.JoinChoice? other) -> bool
+Akinly.JoinChoice.ExampleItemIds.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Akinly.JoinChoice.ExampleItemIds.init -> void
+Akinly.JoinChoice.JoinChoice(long ClusterId, double Similarity, string? ClusterLabel, System.Collections.Generic.IReadOnlyList<string!>! ExampleItemIds) -> void
+Akinly.JoinChoice.Similarity.get -> double
+Akinly.JoinChoice.Similarity.init -> void
+Akinly.JoinQuestion
+Akinly.JoinQuestion.ClusterId.get -> long
+Akinly.JoinQuestion.ClusterId.init -> void
+Akinly.JoinQuestion.ClusterLabel.get -> string?
+Akinly.JoinQuestion.ClusterLabel.init -> void
+Akinly.JoinQuestion.Deconstruct(out Akinly.QuestionId Id, out string! ItemId, out long ClusterId, out double Similarity, out string? ClusterLabel, out System.Collections.Generic.IReadOnlyList<string!>! ExampleItemIds) -> void
+Akinly.JoinQuestion.Equals(Akinly.JoinQuestion? other) -> bool
+Akinly.JoinQuestion.ExampleItemIds.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Akinly.JoinQuestion.ExampleItemIds.init -> void
+Akinly.JoinQuestion.ItemId.get -> string!
+Akinly.JoinQuestion.ItemId.init -> void
+Akinly.JoinQuestion.JoinQuestion(Akinly.QuestionId Id, string! ItemId, long ClusterId, double Similarity, string? ClusterLabel, System.Collections.Generic.IReadOnlyList<string!>! ExampleItemIds) -> void
+Akinly.JoinQuestion.OtherChoices.get -> System.Collections.Generic.IReadOnlyList<Akinly.JoinChoice!>!
+Akinly.JoinQuestion.OtherChoices.init -> void
+Akinly.MergeDecision
+Akinly.MergeDecision.Deconstruct(out long FromId, out long IntoId, out double Similarity) -> void
+Akinly.MergeDecision.Equals(Akinly.MergeDecision other) -> bool
+Akinly.MergeDecision.FromId.get -> long
+Akinly.MergeDecision.FromId.init -> void
+Akinly.MergeDecision.IntoId.get -> long
+Akinly.MergeDecision.IntoId.init -> void
+Akinly.MergeDecision.MergeDecision() -> void
+Akinly.MergeDecision.MergeDecision(long FromId, long IntoId, double Similarity) -> void
+Akinly.MergeDecision.Similarity.get -> double
+Akinly.MergeDecision.Similarity.init -> void
+Akinly.MergeQuestion
+Akinly.MergeQuestion.ClusterId.get -> long
+Akinly.MergeQuestion.ClusterId.init -> void
+Akinly.MergeQuestion.ClusterLabel.get -> string?
+Akinly.MergeQuestion.ClusterLabel.init -> void
+Akinly.MergeQuestion.Deconstruct(out Akinly.QuestionId Id, out long ClusterId, out long OtherClusterId, out double Similarity, out string? ClusterLabel, out string? OtherClusterLabel, out System.Collections.Generic.IReadOnlyList<string!>! ExampleItemIds, out System.Collections.Generic.IReadOnlyList<string!>! OtherExampleItemIds) -> void
+Akinly.MergeQuestion.Equals(Akinly.MergeQuestion? other) -> bool
+Akinly.MergeQuestion.ExampleItemIds.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Akinly.MergeQuestion.ExampleItemIds.init -> void
+Akinly.MergeQuestion.MergeQuestion(Akinly.QuestionId Id, long ClusterId, long OtherClusterId, double Similarity, string? ClusterLabel, string? OtherClusterLabel, System.Collections.Generic.IReadOnlyList<string!>! ExampleItemIds, System.Collections.Generic.IReadOnlyList<string!>! OtherExampleItemIds) -> void
+Akinly.MergeQuestion.OtherClusterId.get -> long
+Akinly.MergeQuestion.OtherClusterId.init -> void
+Akinly.MergeQuestion.OtherClusterLabel.get -> string?
+Akinly.MergeQuestion.OtherClusterLabel.init -> void
+Akinly.MergeQuestion.OtherExampleItemIds.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Akinly.MergeQuestion.OtherExampleItemIds.init -> void
+Akinly.MergeRule
+Akinly.MergeRule.Allow = 0 -> Akinly.MergeRule
+Akinly.MergeRule.KeepFirst = 2 -> Akinly.MergeRule
+Akinly.MergeRule.KeepSecond = 3 -> Akinly.MergeRule
+Akinly.MergeRule.Never = 1 -> Akinly.MergeRule
+Akinly.NewCluster
+Akinly.NewCluster.<Clone>$() -> Akinly.NewCluster!
+Akinly.NewCluster.Centroid.get -> float[]!
+Akinly.NewCluster.Centroid.init -> void
+Akinly.NewCluster.Deconstruct(out float[]! Centroid, out System.Collections.Generic.IReadOnlyList<long>! ItemIds) -> void
+Akinly.NewCluster.Equals(Akinly.NewCluster? other) -> bool
+Akinly.NewCluster.ItemIds.get -> System.Collections.Generic.IReadOnlyList<long>!
+Akinly.NewCluster.ItemIds.init -> void
+Akinly.NewCluster.NewCluster(float[]! Centroid, System.Collections.Generic.IReadOnlyList<long>! ItemIds) -> void
+Akinly.Placement
+Akinly.Placement.ClusterId.get -> long
+Akinly.Placement.ClusterId.init -> void
+Akinly.Placement.Deconstruct(out string! ItemId, out long ClusterId, out Akinly.PlacementReason Reason) -> void
+Akinly.Placement.Equals(Akinly.Placement other) -> bool
+Akinly.Placement.ItemId.get -> string!
+Akinly.Placement.ItemId.init -> void
+Akinly.Placement.Placement() -> void
+Akinly.Placement.Placement(string! ItemId, long ClusterId, Akinly.PlacementReason Reason) -> void
+Akinly.Placement.Reason.get -> Akinly.PlacementReason
+Akinly.Placement.Reason.init -> void
+Akinly.PlacementReason
+Akinly.PlacementReason.Judge = 1 -> Akinly.PlacementReason
+Akinly.PlacementReason.NewCluster = 2 -> Akinly.PlacementReason
+Akinly.PlacementReason.Similarity = 0 -> Akinly.PlacementReason
+Akinly.Question
+Akinly.Question.Deconstruct(out Akinly.QuestionId Id, out double Similarity) -> void
+Akinly.Question.Id.get -> Akinly.QuestionId
+Akinly.Question.Id.init -> void
+Akinly.Question.Question(Akinly.Question! original) -> void
+Akinly.Question.Question(Akinly.QuestionId Id, double Similarity) -> void
+Akinly.Question.Similarity.get -> double
+Akinly.Question.Similarity.init -> void
+Akinly.QuestionId
+Akinly.QuestionId.CompareTo(Akinly.QuestionId other) -> int
+Akinly.QuestionId.Deconstruct(out long Value) -> void
+Akinly.QuestionId.Equals(Akinly.QuestionId other) -> bool
+Akinly.QuestionId.QuestionId() -> void
+Akinly.QuestionId.QuestionId(long Value) -> void
+Akinly.QuestionId.Value.get -> long
+Akinly.QuestionId.Value.init -> void
+Akinly.SplitOptions
+Akinly.SplitOptions.CohesionThreshold.get -> double
+Akinly.SplitOptions.CohesionThreshold.set -> void
+Akinly.SplitOptions.Enabled.get -> bool
+Akinly.SplitOptions.Enabled.set -> void
+Akinly.SplitOptions.MinPartSize.get -> int
+Akinly.SplitOptions.MinPartSize.set -> void
+Akinly.SplitOptions.RegroupSimilarity.get -> double
+Akinly.SplitOptions.RegroupSimilarity.set -> void
+Akinly.SplitOptions.SplitOptions() -> void
+Akinly.Storage.ChangeSet
+Akinly.Storage.ChangeSet.<Clone>$() -> Akinly.Storage.ChangeSet!
+Akinly.Storage.ChangeSet.ChangeSet(Akinly.Storage.StoreInfo! Info, System.Collections.Generic.IReadOnlyList<Akinly.Storage.StoredCluster!>! Clusters, System.Collections.Generic.IReadOnlyList<Akinly.Storage.StoredItem!>! Items, System.Collections.Generic.IReadOnlyList<string!>! RemovedItemIds, System.Collections.Generic.IReadOnlyList<Akinly.Storage.StoredQuestion!>! Questions, System.Collections.Generic.IReadOnlyList<Akinly.Storage.MergeCheck!>! MergeChecks) -> void
+Akinly.Storage.ChangeSet.Clusters.get -> System.Collections.Generic.IReadOnlyList<Akinly.Storage.StoredCluster!>!
+Akinly.Storage.ChangeSet.Clusters.init -> void
+Akinly.Storage.ChangeSet.Deconstruct(out Akinly.Storage.StoreInfo! Info, out System.Collections.Generic.IReadOnlyList<Akinly.Storage.StoredCluster!>! Clusters, out System.Collections.Generic.IReadOnlyList<Akinly.Storage.StoredItem!>! Items, out System.Collections.Generic.IReadOnlyList<string!>! RemovedItemIds, out System.Collections.Generic.IReadOnlyList<Akinly.Storage.StoredQuestion!>! Questions, out System.Collections.Generic.IReadOnlyList<Akinly.Storage.MergeCheck!>! MergeChecks) -> void
+Akinly.Storage.ChangeSet.Equals(Akinly.Storage.ChangeSet? other) -> bool
+Akinly.Storage.ChangeSet.Info.get -> Akinly.Storage.StoreInfo!
+Akinly.Storage.ChangeSet.Info.init -> void
+Akinly.Storage.ChangeSet.IsEmpty.get -> bool
+Akinly.Storage.ChangeSet.Items.get -> System.Collections.Generic.IReadOnlyList<Akinly.Storage.StoredItem!>!
+Akinly.Storage.ChangeSet.Items.init -> void
+Akinly.Storage.ChangeSet.MergeChecks.get -> System.Collections.Generic.IReadOnlyList<Akinly.Storage.MergeCheck!>!
+Akinly.Storage.ChangeSet.MergeChecks.init -> void
+Akinly.Storage.ChangeSet.Questions.get -> System.Collections.Generic.IReadOnlyList<Akinly.Storage.StoredQuestion!>!
+Akinly.Storage.ChangeSet.Questions.init -> void
+Akinly.Storage.ChangeSet.RemovedItemIds.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Akinly.Storage.ChangeSet.RemovedItemIds.init -> void
+Akinly.Storage.ClusterNeighbor
+Akinly.Storage.ClusterNeighbor.Cluster.get -> Akinly.Storage.StoredCluster!
+Akinly.Storage.ClusterNeighbor.Cluster.init -> void
+Akinly.Storage.ClusterNeighbor.ClusterNeighbor() -> void
+Akinly.Storage.ClusterNeighbor.ClusterNeighbor(Akinly.Storage.StoredCluster! Cluster, double Similarity) -> void
+Akinly.Storage.ClusterNeighbor.Deconstruct(out Akinly.Storage.StoredCluster! Cluster, out double Similarity) -> void
+Akinly.Storage.ClusterNeighbor.Equals(Akinly.Storage.ClusterNeighbor other) -> bool
+Akinly.Storage.ClusterNeighbor.Similarity.get -> double
+Akinly.Storage.ClusterNeighbor.Similarity.init -> void
+Akinly.Storage.ClusterStoreConflictException
+Akinly.Storage.ClusterStoreConflictException.ActualVersion.get -> long?
+Akinly.Storage.ClusterStoreConflictException.ClusterStoreConflictException() -> void
+Akinly.Storage.ClusterStoreConflictException.ClusterStoreConflictException(long expectedVersion, long actualVersion) -> void
+Akinly.Storage.ClusterStoreConflictException.ClusterStoreConflictException(string! message) -> void
+Akinly.Storage.ClusterStoreConflictException.ClusterStoreConflictException(string! message, System.Exception! innerException) -> void
+Akinly.Storage.ClusterStoreConflictException.ExpectedVersion.get -> long?
+Akinly.Storage.EmbeddingModelMismatchException
+Akinly.Storage.EmbeddingModelMismatchException.EmbeddingModelMismatchException() -> void
+Akinly.Storage.EmbeddingModelMismatchException.EmbeddingModelMismatchException(string! message) -> void
+Akinly.Storage.EmbeddingModelMismatchException.EmbeddingModelMismatchException(string! message, System.Exception! innerException) -> void
+Akinly.Storage.IClusterStore
+Akinly.Storage.IClusterStore.ApplyAsync(Akinly.Storage.ChangeSet! changes, long expectedVersion, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+Akinly.Storage.IClusterStore.GetChangedClustersAsync(long afterId, int count, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Akinly.Storage.StoredCluster!>!>!
+Akinly.Storage.IClusterStore.GetClustersAsync(System.Collections.Generic.IEnumerable<long>! ids, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Akinly.Storage.StoredCluster!>!>!
+Akinly.Storage.IClusterStore.GetExamplesAsync(long clusterId, int count, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<string!>!>!
+Akinly.Storage.IClusterStore.GetInfoAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<Akinly.Storage.StoreInfo!>!
+Akinly.Storage.IClusterStore.GetItemsAsync(System.Collections.Generic.IEnumerable<string!>! ids, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Akinly.Storage.StoredItem!>!>!
+Akinly.Storage.IClusterStore.GetMembersAsync(long clusterId, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Akinly.Storage.StoredItem!>!>!
+Akinly.Storage.IClusterStore.GetMergeChecksAsync(System.Collections.Generic.IEnumerable<(long ClusterId, long OtherClusterId)>! pairs, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Akinly.Storage.MergeCheck!>!>!
+Akinly.Storage.IClusterStore.GetOpenQuestionsAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Akinly.Storage.StoredQuestion!>!>!
+Akinly.Storage.IClusterStore.GetQuestionsAsync(System.Collections.Generic.IEnumerable<Akinly.QuestionId>! ids, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Akinly.Storage.StoredQuestion!>!>!
+Akinly.Storage.IClusterStore.GetWaitingItemsAsync(int count, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Akinly.Storage.StoredItem!>!>!
+Akinly.Storage.IClusterStore.ListClustersAsync(System.Threading.CancellationToken cancellationToken) -> System.Collections.Generic.IAsyncEnumerable<Akinly.Storage.StoredCluster!>!
+Akinly.Storage.IClusterStore.NearestClustersAsync(System.ReadOnlyMemory<float> vector, int count, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Akinly.Storage.ClusterNeighbor>!>!
+Akinly.Storage.InMemoryClusterStore
+Akinly.Storage.InMemoryClusterStore.ApplyAsync(Akinly.Storage.ChangeSet! changes, long expectedVersion, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+Akinly.Storage.InMemoryClusterStore.ExportAsync(System.IO.Stream! destination, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Akinly.Storage.InMemoryClusterStore.GetChangedClustersAsync(long afterId, int count, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Akinly.Storage.StoredCluster!>!>!
+Akinly.Storage.InMemoryClusterStore.GetClustersAsync(System.Collections.Generic.IEnumerable<long>! ids, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Akinly.Storage.StoredCluster!>!>!
+Akinly.Storage.InMemoryClusterStore.GetExamplesAsync(long clusterId, int count, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<string!>!>!
+Akinly.Storage.InMemoryClusterStore.GetInfoAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<Akinly.Storage.StoreInfo!>!
+Akinly.Storage.InMemoryClusterStore.GetItemsAsync(System.Collections.Generic.IEnumerable<string!>! ids, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Akinly.Storage.StoredItem!>!>!
+Akinly.Storage.InMemoryClusterStore.GetMembersAsync(long clusterId, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Akinly.Storage.StoredItem!>!>!
+Akinly.Storage.InMemoryClusterStore.GetMergeChecksAsync(System.Collections.Generic.IEnumerable<(long ClusterId, long OtherClusterId)>! pairs, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Akinly.Storage.MergeCheck!>!>!
+Akinly.Storage.InMemoryClusterStore.GetOpenQuestionsAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Akinly.Storage.StoredQuestion!>!>!
+Akinly.Storage.InMemoryClusterStore.GetQuestionsAsync(System.Collections.Generic.IEnumerable<Akinly.QuestionId>! ids, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Akinly.Storage.StoredQuestion!>!>!
+Akinly.Storage.InMemoryClusterStore.GetWaitingItemsAsync(int count, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Akinly.Storage.StoredItem!>!>!
+Akinly.Storage.InMemoryClusterStore.InMemoryClusterStore() -> void
+Akinly.Storage.InMemoryClusterStore.ListClustersAsync(System.Threading.CancellationToken cancellationToken) -> System.Collections.Generic.IAsyncEnumerable<Akinly.Storage.StoredCluster!>!
+Akinly.Storage.InMemoryClusterStore.NearestClustersAsync(System.ReadOnlyMemory<float> vector, int count, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Akinly.Storage.ClusterNeighbor>!>!
+Akinly.Storage.ItemState
+Akinly.Storage.ItemState.Asking = 1 -> Akinly.Storage.ItemState
+Akinly.Storage.ItemState.Placed = 0 -> Akinly.Storage.ItemState
+Akinly.Storage.ItemState.Waiting = 2 -> Akinly.Storage.ItemState
+Akinly.Storage.MergeCheck
+Akinly.Storage.MergeCheck.<Clone>$() -> Akinly.Storage.MergeCheck!
+Akinly.Storage.MergeCheck.ClusterId.get -> long
+Akinly.Storage.MergeCheck.ClusterId.init -> void
+Akinly.Storage.MergeCheck.Deconstruct(out long ClusterId, out long OtherClusterId, out Akinly.VerdictKind Outcome) -> void
+Akinly.Storage.MergeCheck.Equals(Akinly.Storage.MergeCheck? other) -> bool
+Akinly.Storage.MergeCheck.MergeCheck(long ClusterId, long OtherClusterId, Akinly.VerdictKind Outcome) -> void
+Akinly.Storage.MergeCheck.OtherClusterId.get -> long
+Akinly.Storage.MergeCheck.OtherClusterId.init -> void
+Akinly.Storage.MergeCheck.Outcome.get -> Akinly.VerdictKind
+Akinly.Storage.MergeCheck.Outcome.init -> void
+Akinly.Storage.QuestionState
+Akinly.Storage.QuestionState.Closed = 1 -> Akinly.Storage.QuestionState
+Akinly.Storage.QuestionState.Open = 0 -> Akinly.Storage.QuestionState
+Akinly.Storage.StoredCluster
+Akinly.Storage.StoredCluster.<Clone>$() -> Akinly.Storage.StoredCluster!
+Akinly.Storage.StoredCluster.Centroid.get -> System.ReadOnlyMemory<float>
+Akinly.Storage.StoredCluster.Centroid.init -> void
+Akinly.Storage.StoredCluster.Changed.get -> bool
+Akinly.Storage.StoredCluster.Changed.init -> void
+Akinly.Storage.StoredCluster.Count.get -> int
+Akinly.Storage.StoredCluster.Count.init -> void
+Akinly.Storage.StoredCluster.Deconstruct(out long Id, out System.ReadOnlyMemory<float> Centroid, out System.ReadOnlyMemory<double> Sum, out int Count, out string? Label, out long? MergedIntoId, out bool Changed, out int RemovalsSinceRecompute, out System.Collections.Generic.IReadOnlyList<long>! RefusedBy, out int LabeledAtCount) -> void
+Akinly.Storage.StoredCluster.Equals(Akinly.Storage.StoredCluster? other) -> bool
+Akinly.Storage.StoredCluster.Id.get -> long
+Akinly.Storage.StoredCluster.Id.init -> void
+Akinly.Storage.StoredCluster.IsLive.get -> bool
+Akinly.Storage.StoredCluster.Label.get -> string?
+Akinly.Storage.StoredCluster.Label.init -> void
+Akinly.Storage.StoredCluster.LabeledAtCount.get -> int
+Akinly.Storage.StoredCluster.LabeledAtCount.init -> void
+Akinly.Storage.StoredCluster.MergedIntoId.get -> long?
+Akinly.Storage.StoredCluster.MergedIntoId.init -> void
+Akinly.Storage.StoredCluster.RefusedBy.get -> System.Collections.Generic.IReadOnlyList<long>!
+Akinly.Storage.StoredCluster.RefusedBy.init -> void
+Akinly.Storage.StoredCluster.RemovalsSinceRecompute.get -> int
+Akinly.Storage.StoredCluster.RemovalsSinceRecompute.init -> void
+Akinly.Storage.StoredCluster.StoredCluster(long Id, System.ReadOnlyMemory<float> Centroid, System.ReadOnlyMemory<double> Sum, int Count, string? Label, long? MergedIntoId, bool Changed, int RemovalsSinceRecompute, System.Collections.Generic.IReadOnlyList<long>! RefusedBy, int LabeledAtCount = 0) -> void
+Akinly.Storage.StoredCluster.Sum.get -> System.ReadOnlyMemory<double>
+Akinly.Storage.StoredCluster.Sum.init -> void
+Akinly.Storage.StoredCluster.ToCluster() -> Akinly.Cluster!
+Akinly.Storage.StoredItem
+Akinly.Storage.StoredItem.<Clone>$() -> Akinly.Storage.StoredItem!
+Akinly.Storage.StoredItem.ClusterId.get -> long?
+Akinly.Storage.StoredItem.ClusterId.init -> void
+Akinly.Storage.StoredItem.Deconstruct(out string! Id, out long Sequence, out System.ReadOnlyMemory<float> Embedding, out long? ClusterId, out Akinly.Storage.ItemState State, out System.Collections.Generic.IReadOnlyList<long>! RefusedClusterIds, out Akinly.QuestionId? OpenQuestionId, out bool JudgeUnavailable) -> void
+Akinly.Storage.StoredItem.Embedding.get -> System.ReadOnlyMemory<float>
+Akinly.Storage.StoredItem.Embedding.init -> void
+Akinly.Storage.StoredItem.Equals(Akinly.Storage.StoredItem? other) -> bool
+Akinly.Storage.StoredItem.Id.get -> string!
+Akinly.Storage.StoredItem.Id.init -> void
+Akinly.Storage.StoredItem.JudgeUnavailable.get -> bool
+Akinly.Storage.StoredItem.JudgeUnavailable.init -> void
+Akinly.Storage.StoredItem.OpenQuestionId.get -> Akinly.QuestionId?
+Akinly.Storage.StoredItem.OpenQuestionId.init -> void
+Akinly.Storage.StoredItem.RefusedClusterIds.get -> System.Collections.Generic.IReadOnlyList<long>!
+Akinly.Storage.StoredItem.RefusedClusterIds.init -> void
+Akinly.Storage.StoredItem.Sequence.get -> long
+Akinly.Storage.StoredItem.Sequence.init -> void
+Akinly.Storage.StoredItem.State.get -> Akinly.Storage.ItemState
+Akinly.Storage.StoredItem.State.init -> void
+Akinly.Storage.StoredItem.StoredItem(string! Id, long Sequence, System.ReadOnlyMemory<float> Embedding, long? ClusterId, Akinly.Storage.ItemState State, System.Collections.Generic.IReadOnlyList<long>! RefusedClusterIds, Akinly.QuestionId? OpenQuestionId, bool JudgeUnavailable) -> void
+Akinly.Storage.StoredQuestion
+Akinly.Storage.StoredQuestion.<Clone>$() -> Akinly.Storage.StoredQuestion!
+Akinly.Storage.StoredQuestion.Deconstruct(out Akinly.Question! Question, out Akinly.Storage.QuestionState State, out int FailedAttempts, out Akinly.VerdictKind? Outcome) -> void
+Akinly.Storage.StoredQuestion.Equals(Akinly.Storage.StoredQuestion? other) -> bool
+Akinly.Storage.StoredQuestion.FailedAttempts.get -> int
+Akinly.Storage.StoredQuestion.FailedAttempts.init -> void
+Akinly.Storage.StoredQuestion.Outcome.get -> Akinly.VerdictKind?
+Akinly.Storage.StoredQuestion.Outcome.init -> void
+Akinly.Storage.StoredQuestion.Question.get -> Akinly.Question!
+Akinly.Storage.StoredQuestion.Question.init -> void
+Akinly.Storage.StoredQuestion.State.get -> Akinly.Storage.QuestionState
+Akinly.Storage.StoredQuestion.State.init -> void
+Akinly.Storage.StoredQuestion.StoredQuestion(Akinly.Question! Question, Akinly.Storage.QuestionState State, int FailedAttempts, Akinly.VerdictKind? Outcome) -> void
+Akinly.Storage.StoreInfo
+Akinly.Storage.StoreInfo.<Clone>$() -> Akinly.Storage.StoreInfo!
+Akinly.Storage.StoreInfo.Deconstruct(out long Version, out string? EmbeddingModel, out int Dimensions, out long NextClusterId, out long NextQuestionId, out long NextItemSequence, out int OpenQuestions, out int WaitingItems, out long MaintainCursor) -> void
+Akinly.Storage.StoreInfo.Dimensions.get -> int
+Akinly.Storage.StoreInfo.Dimensions.init -> void
+Akinly.Storage.StoreInfo.EmbeddingModel.get -> string?
+Akinly.Storage.StoreInfo.EmbeddingModel.init -> void
+Akinly.Storage.StoreInfo.Equals(Akinly.Storage.StoreInfo? other) -> bool
+Akinly.Storage.StoreInfo.MaintainCursor.get -> long
+Akinly.Storage.StoreInfo.MaintainCursor.init -> void
+Akinly.Storage.StoreInfo.NextClusterId.get -> long
+Akinly.Storage.StoreInfo.NextClusterId.init -> void
+Akinly.Storage.StoreInfo.NextItemSequence.get -> long
+Akinly.Storage.StoreInfo.NextItemSequence.init -> void
+Akinly.Storage.StoreInfo.NextQuestionId.get -> long
+Akinly.Storage.StoreInfo.NextQuestionId.init -> void
+Akinly.Storage.StoreInfo.OpenQuestions.get -> int
+Akinly.Storage.StoreInfo.OpenQuestions.init -> void
+Akinly.Storage.StoreInfo.StoreInfo(long Version, string? EmbeddingModel, int Dimensions, long NextClusterId, long NextQuestionId, long NextItemSequence, int OpenQuestions, int WaitingItems, long MaintainCursor = 0) -> void
+Akinly.Storage.StoreInfo.Version.get -> long
+Akinly.Storage.StoreInfo.Version.init -> void
+Akinly.Storage.StoreInfo.WaitingItems.get -> int
+Akinly.Storage.StoreInfo.WaitingItems.init -> void
+Akinly.Telemetry.AkinlyTelemetry
+Akinly.Vectors
+Akinly.Verdict
+Akinly.Verdict.Deconstruct(out Akinly.QuestionId QuestionId, out Akinly.VerdictKind Kind) -> void
+Akinly.Verdict.Equals(Akinly.Verdict other) -> bool
+Akinly.Verdict.Kind.get -> Akinly.VerdictKind
+Akinly.Verdict.Kind.init -> void
+Akinly.Verdict.PickedClusterId.get -> long?
+Akinly.Verdict.PickedClusterId.init -> void
+Akinly.Verdict.QuestionId.get -> Akinly.QuestionId
+Akinly.Verdict.QuestionId.init -> void
+Akinly.Verdict.Verdict() -> void
+Akinly.Verdict.Verdict(Akinly.QuestionId QuestionId, Akinly.VerdictKind Kind) -> void
+Akinly.VerdictKind
+Akinly.VerdictKind.Different = 1 -> Akinly.VerdictKind
+Akinly.VerdictKind.Failed = 2 -> Akinly.VerdictKind
+Akinly.VerdictKind.Same = 0 -> Akinly.VerdictKind
+Akinly.VerdictKind.Unanswerable = 3 -> Akinly.VerdictKind
+const Akinly.ClusteringOptions.SectionName = "Akinly" -> string!
+const Akinly.Telemetry.AkinlyTelemetry.Name = "Akinly" -> string!
+Microsoft.Extensions.DependencyInjection.AkinlyBuilder
+Microsoft.Extensions.DependencyInjection.AkinlyBuilder.AkinlyBuilder(Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> void
+Microsoft.Extensions.DependencyInjection.AkinlyBuilder.Services.get -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+Microsoft.Extensions.DependencyInjection.AkinlyBuilder.UseInMemoryStore() -> Microsoft.Extensions.DependencyInjection.AkinlyBuilder!
+Microsoft.Extensions.DependencyInjection.AkinlyBuilder.UseJudge(Akinly.IClusterJudge! judge) -> Microsoft.Extensions.DependencyInjection.AkinlyBuilder!
+Microsoft.Extensions.DependencyInjection.AkinlyBuilder.UseJudge<TJudge>() -> Microsoft.Extensions.DependencyInjection.AkinlyBuilder!
+Microsoft.Extensions.DependencyInjection.AkinlyBuilder.UseMergePolicy(Akinly.IMergePolicy! policy) -> Microsoft.Extensions.DependencyInjection.AkinlyBuilder!
+Microsoft.Extensions.DependencyInjection.AkinlyBuilder.UseMergePolicy<TPolicy>() -> Microsoft.Extensions.DependencyInjection.AkinlyBuilder!
+Microsoft.Extensions.DependencyInjection.AkinlyBuilder.UseStore(Akinly.Storage.IClusterStore! store) -> Microsoft.Extensions.DependencyInjection.AkinlyBuilder!
+Microsoft.Extensions.DependencyInjection.AkinlyBuilder.UseStore<TStore>() -> Microsoft.Extensions.DependencyInjection.AkinlyBuilder!
+Microsoft.Extensions.DependencyInjection.AkinlyServiceCollectionExtensions
+override Akinly.AssignmentResult.Equals(object? obj) -> bool
+override Akinly.AssignmentResult.GetHashCode() -> int
+override Akinly.AssignmentResult.ToString() -> string!
+override Akinly.Cluster.Equals(object? obj) -> bool
+override Akinly.Cluster.GetHashCode() -> int
+override Akinly.Cluster.ToString() -> string!
+override Akinly.ClusteringStep.Equals(object? obj) -> bool
+override Akinly.ClusteringStep.GetHashCode() -> int
+override Akinly.ClusteringStep.ToString() -> string!
+override Akinly.ClusterItem.Equals(object? obj) -> bool
+override Akinly.ClusterItem.GetHashCode() -> int
+override Akinly.ClusterItem.ToString() -> string!
+override Akinly.ClusterMerge.GetHashCode() -> int
+override Akinly.ClusterSplit.Equals(object? obj) -> bool
+override Akinly.ClusterSplit.GetHashCode() -> int
+override Akinly.ClusterSplit.ToString() -> string!
+override Akinly.ClusterState.Equals(object? obj) -> bool
+override Akinly.ClusterState.GetHashCode() -> int
+override Akinly.ClusterState.ToString() -> string!
+override Akinly.EmbeddedItem.GetHashCode() -> int
+override Akinly.JoinChoice.Equals(object? obj) -> bool
+override Akinly.JoinChoice.GetHashCode() -> int
+override Akinly.JoinChoice.ToString() -> string!
+override Akinly.JoinQuestion.<Clone>$() -> Akinly.JoinQuestion!
+override Akinly.JoinQuestion.Equals(object? obj) -> bool
+override Akinly.JoinQuestion.GetHashCode() -> int
+override Akinly.JoinQuestion.ToString() -> string!
+override Akinly.MergeDecision.GetHashCode() -> int
+override Akinly.MergeQuestion.<Clone>$() -> Akinly.MergeQuestion!
+override Akinly.MergeQuestion.Equals(object? obj) -> bool
+override Akinly.MergeQuestion.GetHashCode() -> int
+override Akinly.MergeQuestion.ToString() -> string!
+override Akinly.NewCluster.Equals(object? obj) -> bool
+override Akinly.NewCluster.GetHashCode() -> int
+override Akinly.NewCluster.ToString() -> string!
+override Akinly.Placement.GetHashCode() -> int
+override Akinly.Question.Equals(object? obj) -> bool
+override Akinly.Question.GetHashCode() -> int
+override Akinly.Question.ToString() -> string!
+override Akinly.QuestionId.GetHashCode() -> int
+override Akinly.QuestionId.ToString() -> string!
+override Akinly.Storage.ChangeSet.Equals(object? obj) -> bool
+override Akinly.Storage.ChangeSet.GetHashCode() -> int
+override Akinly.Storage.ChangeSet.ToString() -> string!
+override Akinly.Storage.ClusterNeighbor.GetHashCode() -> int
+override Akinly.Storage.MergeCheck.Equals(object? obj) -> bool
+override Akinly.Storage.MergeCheck.GetHashCode() -> int
+override Akinly.Storage.MergeCheck.ToString() -> string!
+override Akinly.Storage.StoredCluster.Equals(object? obj) -> bool
+override Akinly.Storage.StoredCluster.GetHashCode() -> int
+override Akinly.Storage.StoredCluster.ToString() -> string!
+override Akinly.Storage.StoredItem.Equals(object? obj) -> bool
+override Akinly.Storage.StoredItem.GetHashCode() -> int
+override Akinly.Storage.StoredItem.ToString() -> string!
+override Akinly.Storage.StoredQuestion.Equals(object? obj) -> bool
+override Akinly.Storage.StoredQuestion.GetHashCode() -> int
+override Akinly.Storage.StoredQuestion.ToString() -> string!
+override Akinly.Storage.StoreInfo.Equals(object? obj) -> bool
+override Akinly.Storage.StoreInfo.GetHashCode() -> int
+override Akinly.Storage.StoreInfo.ToString() -> string!
+override Akinly.Verdict.GetHashCode() -> int
+override sealed Akinly.JoinQuestion.Equals(Akinly.Question? other) -> bool
+override sealed Akinly.MergeQuestion.Equals(Akinly.Question? other) -> bool
+static Akinly.AssignmentResult.operator !=(Akinly.AssignmentResult? left, Akinly.AssignmentResult? right) -> bool
+static Akinly.AssignmentResult.operator ==(Akinly.AssignmentResult? left, Akinly.AssignmentResult? right) -> bool
+static Akinly.Cluster.operator !=(Akinly.Cluster? left, Akinly.Cluster? right) -> bool
+static Akinly.Cluster.operator ==(Akinly.Cluster? left, Akinly.Cluster? right) -> bool
+static Akinly.ClustererExtensions.SettleAsync(this Akinly.Clusterer! clusterer, Akinly.IClusterJudge! judge, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Akinly.ClusteringStep!>!
+static Akinly.ClustererExtensions.SettleAsync(this Akinly.Clusterer! clusterer, System.Collections.Generic.IEnumerable<Akinly.ClusterItem!>! items, Akinly.IClusterJudge! judge, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Akinly.ClusteringStep!>!
+static Akinly.ClusteringOptions.CosineOnly(string! embeddingModel, double joinSimilarity, double? mergeSimilarity = null) -> Akinly.ClusteringOptions!
+static Akinly.ClusteringStep.Empty.get -> Akinly.ClusteringStep!
+static Akinly.ClusteringStep.operator !=(Akinly.ClusteringStep? left, Akinly.ClusteringStep? right) -> bool
+static Akinly.ClusteringStep.operator ==(Akinly.ClusteringStep? left, Akinly.ClusteringStep? right) -> bool
+static Akinly.ClusterItem.operator !=(Akinly.ClusterItem? left, Akinly.ClusterItem? right) -> bool
+static Akinly.ClusterItem.operator ==(Akinly.ClusterItem? left, Akinly.ClusterItem? right) -> bool
+static Akinly.ClusterMerge.operator !=(Akinly.ClusterMerge left, Akinly.ClusterMerge right) -> bool
+static Akinly.ClusterMerge.operator ==(Akinly.ClusterMerge left, Akinly.ClusterMerge right) -> bool
+static Akinly.ClusterSplit.operator !=(Akinly.ClusterSplit? left, Akinly.ClusterSplit? right) -> bool
+static Akinly.ClusterSplit.operator ==(Akinly.ClusterSplit? left, Akinly.ClusterSplit? right) -> bool
+static Akinly.ClusterState.operator !=(Akinly.ClusterState? left, Akinly.ClusterState? right) -> bool
+static Akinly.ClusterState.operator ==(Akinly.ClusterState? left, Akinly.ClusterState? right) -> bool
+static Akinly.EmbeddedItem.operator !=(Akinly.EmbeddedItem left, Akinly.EmbeddedItem right) -> bool
+static Akinly.EmbeddedItem.operator ==(Akinly.EmbeddedItem left, Akinly.EmbeddedItem right) -> bool
+static Akinly.IncrementalClusterer.Assign(System.Collections.Generic.IReadOnlyList<Akinly.ClusterState!>! existing, System.Collections.Generic.IReadOnlyList<Akinly.EmbeddedItem>! items, double joinSimilarity, System.Func<long, long, bool>? refused = null) -> Akinly.AssignmentResult!
+static Akinly.IncrementalClusterer.ClusterToCheck(float[]! embedding, System.Collections.Generic.IReadOnlyList<Akinly.ClusterState!>! candidates, System.Collections.Generic.IReadOnlySet<long>! refused, double joinSimilarity, double checkSimilarity, int maxChecks) -> long?
+static Akinly.IncrementalClusterer.Cohesion(System.Collections.Generic.IReadOnlyList<Akinly.EmbeddedItem>! members) -> double
+static Akinly.IncrementalClusterer.FindMerges(System.Collections.Generic.IReadOnlyList<Akinly.ClusterState!>! clusters, double mergeSimilarity) -> System.Collections.Generic.IReadOnlyList<Akinly.MergeDecision>!
+static Akinly.IncrementalClusterer.FindMerges(System.Collections.Generic.IReadOnlyList<Akinly.ClusterState!>! clusters, System.Collections.Generic.IEnumerable<(long A, long B)>! pairs, double mergeSimilarity) -> System.Collections.Generic.IReadOnlyList<Akinly.MergeDecision>!
+static Akinly.IncrementalClusterer.Join(Akinly.ClusterState! cluster, Akinly.EmbeddedItem item) -> Akinly.ClusterState!
+static Akinly.IncrementalClusterer.TrySplit(System.Collections.Generic.IReadOnlyList<Akinly.EmbeddedItem>! members, double cohesionThreshold, double regroupSimilarity, int minPartSize) -> System.Collections.Generic.IReadOnlyList<Akinly.NewCluster!>?
+static Akinly.JoinChoice.operator !=(Akinly.JoinChoice? left, Akinly.JoinChoice? right) -> bool
+static Akinly.JoinChoice.operator ==(Akinly.JoinChoice? left, Akinly.JoinChoice? right) -> bool
+static Akinly.JoinQuestion.operator !=(Akinly.JoinQuestion? left, Akinly.JoinQuestion? right) -> bool
+static Akinly.JoinQuestion.operator ==(Akinly.JoinQuestion? left, Akinly.JoinQuestion? right) -> bool
+static Akinly.MergeDecision.operator !=(Akinly.MergeDecision left, Akinly.MergeDecision right) -> bool
+static Akinly.MergeDecision.operator ==(Akinly.MergeDecision left, Akinly.MergeDecision right) -> bool
+static Akinly.MergeQuestion.operator !=(Akinly.MergeQuestion? left, Akinly.MergeQuestion? right) -> bool
+static Akinly.MergeQuestion.operator ==(Akinly.MergeQuestion? left, Akinly.MergeQuestion? right) -> bool
+static Akinly.NewCluster.operator !=(Akinly.NewCluster? left, Akinly.NewCluster? right) -> bool
+static Akinly.NewCluster.operator ==(Akinly.NewCluster? left, Akinly.NewCluster? right) -> bool
+static Akinly.Placement.operator !=(Akinly.Placement left, Akinly.Placement right) -> bool
+static Akinly.Placement.operator ==(Akinly.Placement left, Akinly.Placement right) -> bool
+static Akinly.Question.operator !=(Akinly.Question? left, Akinly.Question? right) -> bool
+static Akinly.Question.operator ==(Akinly.Question? left, Akinly.Question? right) -> bool
+static Akinly.QuestionId.operator !=(Akinly.QuestionId left, Akinly.QuestionId right) -> bool
+static Akinly.QuestionId.operator <(Akinly.QuestionId left, Akinly.QuestionId right) -> bool
+static Akinly.QuestionId.operator <=(Akinly.QuestionId left, Akinly.QuestionId right) -> bool
+static Akinly.QuestionId.operator ==(Akinly.QuestionId left, Akinly.QuestionId right) -> bool
+static Akinly.QuestionId.operator >(Akinly.QuestionId left, Akinly.QuestionId right) -> bool
+static Akinly.QuestionId.operator >=(Akinly.QuestionId left, Akinly.QuestionId right) -> bool
+static Akinly.Storage.ChangeSet.operator !=(Akinly.Storage.ChangeSet? left, Akinly.Storage.ChangeSet? right) -> bool
+static Akinly.Storage.ChangeSet.operator ==(Akinly.Storage.ChangeSet? left, Akinly.Storage.ChangeSet? right) -> bool
+static Akinly.Storage.ClusterNeighbor.operator !=(Akinly.Storage.ClusterNeighbor left, Akinly.Storage.ClusterNeighbor right) -> bool
+static Akinly.Storage.ClusterNeighbor.operator ==(Akinly.Storage.ClusterNeighbor left, Akinly.Storage.ClusterNeighbor right) -> bool
+static Akinly.Storage.InMemoryClusterStore.ImportAsync(System.IO.Stream! source, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Akinly.Storage.InMemoryClusterStore!>!
+static Akinly.Storage.MergeCheck.Key(long a, long b) -> (long, long)
+static Akinly.Storage.MergeCheck.operator !=(Akinly.Storage.MergeCheck? left, Akinly.Storage.MergeCheck? right) -> bool
+static Akinly.Storage.MergeCheck.operator ==(Akinly.Storage.MergeCheck? left, Akinly.Storage.MergeCheck? right) -> bool
+static Akinly.Storage.StoredCluster.operator !=(Akinly.Storage.StoredCluster? left, Akinly.Storage.StoredCluster? right) -> bool
+static Akinly.Storage.StoredCluster.operator ==(Akinly.Storage.StoredCluster? left, Akinly.Storage.StoredCluster? right) -> bool
+static Akinly.Storage.StoredItem.operator !=(Akinly.Storage.StoredItem? left, Akinly.Storage.StoredItem? right) -> bool
+static Akinly.Storage.StoredItem.operator ==(Akinly.Storage.StoredItem? left, Akinly.Storage.StoredItem? right) -> bool
+static Akinly.Storage.StoredQuestion.operator !=(Akinly.Storage.StoredQuestion? left, Akinly.Storage.StoredQuestion? right) -> bool
+static Akinly.Storage.StoredQuestion.operator ==(Akinly.Storage.StoredQuestion? left, Akinly.Storage.StoredQuestion? right) -> bool
+static Akinly.Storage.StoreInfo.Empty.get -> Akinly.Storage.StoreInfo!
+static Akinly.Storage.StoreInfo.operator !=(Akinly.Storage.StoreInfo? left, Akinly.Storage.StoreInfo? right) -> bool
+static Akinly.Storage.StoreInfo.operator ==(Akinly.Storage.StoreInfo? left, Akinly.Storage.StoreInfo? right) -> bool
+static Akinly.Vectors.AddToMean(float[]! centroid, float[]! sample, int newCount) -> void
+static Akinly.Vectors.Dot(float[]! a, float[]! b) -> double
+static Akinly.Vectors.Mean(System.Collections.Generic.IReadOnlyList<float[]!>! vectors) -> float[]!
+static Akinly.Vectors.Normalize(float[]! vector) -> float[]!
+static Akinly.Vectors.WeightedMean(float[]! a, int countA, float[]! b, int countB) -> float[]!
+static Akinly.Verdict.Different(Akinly.QuestionId questionId) -> Akinly.Verdict
+static Akinly.Verdict.Failed(Akinly.QuestionId questionId) -> Akinly.Verdict
+static Akinly.Verdict.operator !=(Akinly.Verdict left, Akinly.Verdict right) -> bool
+static Akinly.Verdict.operator ==(Akinly.Verdict left, Akinly.Verdict right) -> bool
+static Akinly.Verdict.Picked(Akinly.QuestionId questionId, long clusterId) -> Akinly.Verdict
+static Akinly.Verdict.Same(Akinly.QuestionId questionId) -> Akinly.Verdict
+static Akinly.Verdict.Unanswerable(Akinly.QuestionId questionId) -> Akinly.Verdict
+static Microsoft.Extensions.DependencyInjection.AkinlyServiceCollectionExtensions.AddAkinly(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration, System.Action<Akinly.ClusteringOptions!>? configure = null) -> Microsoft.Extensions.DependencyInjection.AkinlyBuilder!
+static Microsoft.Extensions.DependencyInjection.AkinlyServiceCollectionExtensions.AddAkinly(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<Akinly.ClusteringOptions!>? configure = null) -> Microsoft.Extensions.DependencyInjection.AkinlyBuilder!
+virtual Akinly.Question.EqualityContract.get -> System.Type!
+virtual Akinly.Question.Equals(Akinly.Question? other) -> bool
+virtual Akinly.Question.PrintMembers(System.Text.StringBuilder! builder) -> bool
+~override Akinly.ClusterMerge.Equals(object obj) -> bool
+~override Akinly.ClusterMerge.ToString() -> string
+~override Akinly.EmbeddedItem.Equals(object obj) -> bool
+~override Akinly.EmbeddedItem.ToString() -> string
+~override Akinly.MergeDecision.Equals(object obj) -> bool
+~override Akinly.MergeDecision.ToString() -> string
+~override Akinly.Placement.Equals(object obj) -> bool
+~override Akinly.Placement.ToString() -> string
+~override Akinly.QuestionId.Equals(object obj) -> bool
+~override Akinly.Storage.ClusterNeighbor.Equals(object obj) -> bool
+~override Akinly.Storage.ClusterNeighbor.ToString() -> string
+~override Akinly.Verdict.Equals(object obj) -> bool
+~override Akinly.Verdict.ToString() -> string
