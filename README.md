@@ -1,4 +1,4 @@
-# Akinly
+# <img src="assets/icon.svg" alt="" width="40" align="top"> Akinly
 
 [![CI](https://github.com/valburkin/Akinly/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/valburkin/Akinly/actions/workflows/ci.yml?query=branch%3Amain)
 [![CodeQL](https://github.com/valburkin/Akinly/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/valburkin/Akinly/actions/workflows/codeql.yml)

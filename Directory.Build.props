@@ -25,7 +25,7 @@
 
   <!-- Package metadata for the libraries under src/. -->
   <PropertyGroup>
-    <Version>1.0.0</Version>
+    <Version>1.0.1</Version>
     <!-- Pack compares each package with this release on nuget.org (EnablePackageValidation), so
          a breaking change cannot ship by accident in a minor or patch version. -->
     <PackageValidationBaselineVersion>1.0.0</PackageValidationBaselineVersion>
@@ -35,6 +35,7 @@
     <PackageProjectUrl>https://github.com/valburkin/Akinly</PackageProjectUrl>
     <PackageReleaseNotes>https://github.com/valburkin/Akinly/blob/main/CHANGELOG.md</PackageReleaseNotes>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageIcon>icon.png</PackageIcon>
     <PackageTags>clustering;text-clustering;embeddings;semantic;llm;deduplication;incremental</PackageTags>
     <RepositoryUrl>https://github.com/valburkin/Akinly</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
