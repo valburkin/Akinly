@@ -13,6 +13,14 @@ updates:
       nuget-minor-and-patch:
         update-types: [minor, patch]
     ignore:
+      # The libraries' dependencies are minimum versions, kept low on purpose so apps on the
+      # .NET 10 packages can use them (Directory.Packages.props); raise them by hand.
+      - dependency-name: Microsoft.Extensions.DependencyInjection.Abstractions
+      - dependency-name: Microsoft.Extensions.Logging.Abstractions
+      - dependency-name: Microsoft.Extensions.Options
+      - dependency-name: Microsoft.Extensions.Options.ConfigurationExtensions
+      - dependency-name: System.Numerics.Tensors
+      - dependency-name: Microsoft.Extensions.AI.Abstractions
       # Current connectors are built against VectorData.Abstractions 10.1.0 and fail against 10.5.0
       # and later (docs/design.md); move it by hand once they catch up.
       - dependency-name: Microsoft.Extensions.VectorData.Abstractions

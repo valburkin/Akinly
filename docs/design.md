@@ -145,7 +145,9 @@ flowchart LR
 | `Akinly.VectorData` | A store over any `Microsoft.Extensions.VectorData` vector store | `Akinly`, `Microsoft.Extensions.VectorData.Abstractions` |
 
 Both Microsoft abstraction packages are stable. `Akinly.AI` uses
-Microsoft.Extensions.AI.Abstractions 11.0.0. `Akinly.VectorData` uses
+Microsoft.Extensions.AI.Abstractions 10.6.0 or later, and the core the Microsoft.Extensions
+packages 10.0.0 or later: each package asks for the oldest version it works with, so an app
+that pins the .NET 10 packages can use it. `Akinly.VectorData` uses
 Microsoft.Extensions.VectorData.Abstractions 10.1.0, not a later version: the connectors available
 today (Qdrant, pgvector, in-memory and others, still pre-release) are built against 10.1.0, and
 10.5.0 removed types they use (`VectorSearchFilter`), as did 11.0.0. Akinly depends only on the abstractions, and you choose the connector

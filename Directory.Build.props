@@ -25,7 +25,7 @@
 
   <!-- Package metadata for the libraries under src/. -->
   <PropertyGroup>
-    <Version>1.0.1</Version>
+    <Version>1.0.2</Version>
     <!-- Pack compares each package with this release on nuget.org (EnablePackageValidation), so
          a breaking change cannot ship by accident in a minor or patch version. -->
     <PackageValidationBaselineVersion>1.0.1</PackageValidationBaselineVersion>

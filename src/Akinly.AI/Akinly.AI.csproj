@@ -5,9 +5,6 @@
     <Description>Akinly with any language model through Microsoft.Extensions.AI: a judge that decides close calls, a labeler that titles clusters, and a text clusterer that embeds texts for you. Works with local models (Ollama) and cloud ones alike.</Description>
     <PackageTags>$(PackageTags);ai;microsoft-extensions-ai;ollama;openai</PackageTags>
     <IsPackable>true</IsPackable>
-    <!-- Transitive pinning would turn every centrally pinned package this project pulls in
-         into a dependency of the package; a package declares only what it references. -->
-    <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
     <EnablePackageValidation>true</EnablePackageValidation>
   </PropertyGroup>
 

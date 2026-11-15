@@ -1,19 +1,24 @@
 <Project>
 
-  <!-- Central Package Management: every package version lives here, never in a project. -->
+  <!-- Central Package Management: every package version lives here, never in a project.
+       Transitive packages are not pinned: the libraries' versions below are the lowest each
+       package accepts, and the tests and tools resolve whatever newer version their own
+       packages need. The lock files record what each project resolved, and NuGetAudit checks
+       every transitive package for known vulnerabilities. -->
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
 
   <!-- Akinly: Microsoft's own abstractions only, so the core carries no model or database
-       dependency. -->
+       dependency. These are the packages' minimum versions, the oldest of the .NET 10 line, so
+       an app that pins the 10.0 packages can use Akinly; raise them only when the code needs a
+       newer API (Dependabot leaves them alone). -->
   <ItemGroup>
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="11.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="11.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.Options" Version="11.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="11.0.0" />
-    <PackageVersion Include="System.Numerics.Tensors" Version="11.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Options" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.0" />
+    <PackageVersion Include="System.Numerics.Tensors" Version="10.0.0" />
   </ItemGroup>
 
   <!-- Build-time only, never a dependency of a package: the shipped public API is recorded in
@@ -25,7 +30,9 @@
 
   <!-- Akinly.AI: the abstractions only; you bring the provider's adapter. -->
   <ItemGroup>
-    <PackageVersion Include="Microsoft.Extensions.AI.Abstractions" Version="11.0.0" />
+    <!-- The minimum: 10.6.0 is the first version in which ChatOptions.ContinuationToken and
+         AllowBackgroundResponses, which the judge and labeler clear, are no longer experimental. -->
+    <PackageVersion Include="Microsoft.Extensions.AI.Abstractions" Version="10.6.0" />
   </ItemGroup>
 
   <!-- Akinly.VectorData: the abstractions only; you bring the database's connector. -->

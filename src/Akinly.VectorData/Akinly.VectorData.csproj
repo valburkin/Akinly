@@ -5,9 +5,6 @@
     <Description>An Akinly cluster store over a vector database with a Microsoft.Extensions.VectorData connector, tested with Qdrant and PostgreSQL with pgvector: one writer at a time, with a journal so a write stopped halfway is finished by the next one.</Description>
     <PackageTags>$(PackageTags);vector-database;microsoft-extensions-vectordata;qdrant;pgvector</PackageTags>
     <IsPackable>true</IsPackable>
-    <!-- Transitive pinning would turn every centrally pinned package this project pulls in
-         into a dependency of the package; a package declares only what it references. -->
-    <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
     <EnablePackageValidation>true</EnablePackageValidation>
   </PropertyGroup>
 

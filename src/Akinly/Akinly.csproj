@@ -4,9 +4,6 @@
     <PackageId>Akinly</PackageId>
     <Description>Incremental clustering of short texts by embedding similarity, with lasting cluster ids, merges and splits, and an optional judge (such as a language model) for the close calls.</Description>
     <IsPackable>true</IsPackable>
-    <!-- Transitive pinning would turn every centrally pinned package this project pulls in
-         into a dependency of the package; a package declares only what it references. -->
-    <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
     <!-- Pack checks the package for common mistakes; after 1.0 it also compares the public
          API with the last release (PackageValidationBaselineVersion). -->
     <EnablePackageValidation>true</EnablePackageValidation>

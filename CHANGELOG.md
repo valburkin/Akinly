@@ -4,6 +4,12 @@ All notable changes to Akinly are listed here. The format follows [Keep a Change
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-11-15
+
+### Fixed
+
+- The packages required the Microsoft.Extensions packages 11.0.0, so a .NET 10 app that pins the 10.0 packages could not add them. They now ask for the oldest versions they work with: 10.0.0 for the core's Microsoft.Extensions packages and System.Numerics.Tensors, and 10.6.0 for Microsoft.Extensions.AI.Abstractions.
+
 ## [1.0.1] - 2026-11-15
 
 ### Added
@@ -44,6 +50,7 @@ All notable changes to Akinly are listed here. The format follows [Keep a Change
 - Documentation: a README with a quick start for each setup, guides in `docs/` (getting started, concepts, configuration, troubleshooting, FAQ, and how-to guides for Ollama, OpenAI, Azure OpenAI and Anthropic, cosine-only clustering, answering questions yourself or through a batch API, merge policies, Qdrant, PostgreSQL with pgvector, labels, removals, calibration, dependency injection, OpenTelemetry, and saving the in-memory store), and a README for each package. The examples that need only the core package run as tests (`ReadmeExampleTests`, `DocsExampleTests`).
 - Benchmarks (`benchmarks/Akinly.Benchmarks`, BenchmarkDotNet) of nearest-cluster search, adding items and maintenance, by store size, on data where items join and clusters merge.
 
-[Unreleased]: https://github.com/valburkin/Akinly/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/valburkin/Akinly/compare/v1.0.2...HEAD
+[1.0.2]: https://github.com/valburkin/Akinly/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/valburkin/Akinly/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/valburkin/Akinly/releases/tag/v1.0.0
