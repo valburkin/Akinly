@@ -64,7 +64,7 @@ public sealed class MergePolicyTests
     {
         // Join at 0.9, ask from 0.6; merge at 0.95, ask from 0.8: the pair at 0.87 is a close call.
         // Refusals are not to bind merges here, so only the policy keeps the pair apart.
-        var options = Judged(o => o.MergeRespectsRefusals = false);
+        var options = Judged(o => o.MergeRefusals = RefusalRule.Ignore);
         var judge = new DelegateJudge(_ => VerdictKind.Different);
         var allowed = new Clusterer(new InMemoryClusterStore(), options);
         var forbidden = new Clusterer(new InMemoryClusterStore(), options, mergePolicy: new DelegateMergePolicy((_, _) => MergeRule.Never));
@@ -81,7 +81,7 @@ public sealed class MergePolicyTests
     public async Task A_judge_s_late_yes_does_not_merge_a_pair_the_policy_has_since_forbidden()
     {
         var forbid = false;
-        var clusterer = new Clusterer(new InMemoryClusterStore(), Judged(o => o.MergeRespectsRefusals = false), mergePolicy: new DelegateMergePolicy((_, _) => forbid ? MergeRule.Never : MergeRule.Allow));
+        var clusterer = new Clusterer(new InMemoryClusterStore(), Judged(o => o.MergeRefusals = RefusalRule.Ignore), mergePolicy: new DelegateMergePolicy((_, _) => forbid ? MergeRule.Never : MergeRule.Allow));
         await clusterer.SettleAsync([Item("a", At(0)), Item("b", At(30))], new DelegateJudge(_ => VerdictKind.Different));
         var question = Assert.Single((await clusterer.MaintainAsync()).Questions.OfType<MergeQuestion>());
 

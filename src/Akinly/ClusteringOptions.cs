@@ -22,16 +22,20 @@ public sealed class ClusteringOptions
 
     /// <summary>
     /// At or above this similarity (and below <see cref="JoinSimilarity"/>), a judge decides
-    /// whether an item joins. Default 0.30. Set it equal to <see cref="JoinSimilarity"/> for
-    /// cosine-only clustering, with no judge.
+    /// whether an item joins. Default 0.30, so a judge sees almost every item it could place.
+    /// On texts written to one template, where a judge rarely says yes at low similarity, raise
+    /// it (<see cref="ThresholdCalibrator"/> finds where). Set it equal to
+    /// <see cref="JoinSimilarity"/> for cosine-only clustering, with no judge.
     /// </summary>
     public double CheckSimilarity { get; set; } = 0.30;
 
     /// <summary>
     /// Refusals an item takes before it starts a cluster of its own; a "none" to a question with
-    /// choices counts one for each cluster offered. Default 5.
+    /// choices counts one for each cluster offered. Default 3: with the default
+    /// <see cref="JoinChoices"/>, one question per item. Items placed on a later question are
+    /// wrong far more often than on the first.
     /// </summary>
-    public int MaxChecksPerItem { get; set; } = 5;
+    public int MaxChecksPerItem { get; set; } = 3;
 
     /// <summary>
     /// Questions open at once. While it is reached, new items that need a question wait. Lower
@@ -47,20 +51,44 @@ public sealed class ClusteringOptions
     /// </summary>
     public int CandidateClusters { get; set; } = 10;
 
-    /// <summary>At or above this similarity of their centroids, two clusters merge without a question. Default 0.96.</summary>
-    public double MergeSimilarity { get; set; } = 0.96;
+    /// <summary>
+    /// At or above this similarity of two clusters (measured as <see cref="MergeLinkage"/> says),
+    /// they merge without a question. Default 0.72, on the default linkage.
+    /// </summary>
+    public double MergeSimilarity { get; set; } = 0.72;
 
     /// <summary>
     /// At or above this similarity (and below <see cref="MergeSimilarity"/>), a judge decides
-    /// whether two clusters merge. Default 0.48.
+    /// whether two clusters merge. Default 0.55, on the default linkage.
     /// </summary>
-    public double MergeCheckSimilarity { get; set; } = 0.48;
+    public double MergeCheckSimilarity { get; set; } = 0.55;
+
+    /// <summary>
+    /// How a refusal bears on merging two clusters, when one cluster refused an item that is now
+    /// in the other. Default <see cref="RefusalRule.Ask"/>: a judge decides, and the pair is never
+    /// merged on similarity alone.
+    /// </summary>
+    public RefusalRule MergeRefusals { get; set; } = RefusalRule.Ask;
+
+    /// <summary>
+    /// How the similarity of two clusters is measured for <see cref="MergeSimilarity"/> and
+    /// <see cref="MergeCheckSimilarity"/>. Default <see cref="ClusterLinkage.Average"/>: the
+    /// average similarity of a member of one to a member of the other.
+    /// </summary>
+    public ClusterLinkage MergeLinkage { get; set; } = ClusterLinkage.Average;
 
     /// <summary>
     /// Whether a merge is skipped when one cluster already refused an item that is now in the
-    /// other. Default true: otherwise a merge can carry an item into a cluster that refused it.
+    /// other: true when <see cref="MergeRefusals"/> is <see cref="RefusalRule.Block"/>. Setting it
+    /// sets <see cref="MergeRefusals"/>: true to <see cref="RefusalRule.Block"/>, false to
+    /// <see cref="RefusalRule.Ignore"/>.
     /// </summary>
-    public bool MergeRespectsRefusals { get; set; } = true;
+    [Obsolete("Use MergeRefusals: true is RefusalRule.Block, false is RefusalRule.Ignore. The default is now RefusalRule.Ask.")]
+    public bool MergeRespectsRefusals
+    {
+        get => MergeRefusals == RefusalRule.Block;
+        set => MergeRefusals = value ? RefusalRule.Block : RefusalRule.Ignore;
+    }
 
     /// <summary>
     /// The most changed clusters one <see cref="Clusterer.MaintainAsync"/> call checks; the rest
@@ -135,6 +163,15 @@ public sealed class ClusteringOptions
         AtLeast(errors, JoinChoices, 1, nameof(JoinChoices));
         AtLeast(errors, ExamplesPerQuestion, 0, nameof(ExamplesPerQuestion));
         AtLeast(errors, MergeExamplesPerCluster, 0, nameof(MergeExamplesPerCluster));
+        if (!Enum.IsDefined(MergeRefusals))
+        {
+            errors.Add("MergeRefusals must be Ask, Block or Ignore.");
+        }
+
+        if (!Enum.IsDefined(MergeLinkage))
+        {
+            errors.Add("MergeLinkage must be Centroid or Average.");
+        }
 
         if (FailedAnswers is null)
         {
@@ -193,7 +230,8 @@ public sealed class ClusteringOptions
         MaxClustersPerMaintain = MaxClustersPerMaintain,
         MergeSimilarity = MergeSimilarity,
         MergeCheckSimilarity = MergeCheckSimilarity,
-        MergeRespectsRefusals = MergeRespectsRefusals,
+        MergeRefusals = MergeRefusals,
+        MergeLinkage = MergeLinkage,
         JoinChoices = JoinChoices,
         ExamplesPerQuestion = ExamplesPerQuestion,
         MergeExamplesPerCluster = MergeExamplesPerCluster,

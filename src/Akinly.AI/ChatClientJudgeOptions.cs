@@ -50,6 +50,18 @@ public sealed class ChatClientJudgeOptions
     /// </summary>
     public bool IncludeLabels { get; set; } = true;
 
+    /// <summary>
+    /// How a merge question is put to the model. Above 0, as join questions: whether each of the
+    /// first this many members of one cluster (those nearest its centroid) belongs in the other,
+    /// both ways, stopping at the first no; the clusters merge only if every answer is yes. 0
+    /// asks once, comparing the two groups as a whole (<see cref="MergeInstructions"/>), as 1.0
+    /// did. Default 1, at most two requests per merge question. A model places one text in a
+    /// group far more reliably than it compares two groups, which on texts written to one
+    /// template it tends to find alike. A question whose clusters show no members is asked as a
+    /// whole.
+    /// </summary>
+    public int MergeMembersEachWay { get; set; } = 1;
+
     /// <summary>How many questions are put to the model at once. Default 4.</summary>
     public int MaxParallelRequests { get; set; } = 4;
 
@@ -100,6 +112,11 @@ public sealed class ChatClientJudgeOptions
             errors.Add("MaxParallelRequests must be at least 1.");
         }
 
+        if (MergeMembersEachWay < 0)
+        {
+            errors.Add("MergeMembersEachWay must be at least 0.");
+        }
+
         if (MaxTextLength < 1)
         {
             errors.Add("MaxTextLength must be at least 1.");
@@ -122,6 +139,7 @@ public sealed class ChatClientJudgeOptions
         ChoiceInstructions = ChoiceInstructions,
         Preference = Preference,
         IncludeLabels = IncludeLabels,
+        MergeMembersEachWay = MergeMembersEachWay,
         MaxParallelRequests = MaxParallelRequests,
         RequestTimeout = RequestTimeout,
         MaxTextLength = MaxTextLength,

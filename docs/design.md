@@ -290,14 +290,15 @@ Thresholds never shift at run time.
 |---|---|---|
 | `JoinSimilarity` | 0.83 | At or above it, an item joins without a question |
 | `CheckSimilarity` | 0.30 | At or above it (and below the join threshold), a judge decides. Set it equal to `JoinSimilarity` for cosine-only clustering |
-| `MaxChecksPerItem` | 5 | Refusals an item takes before it starts its own cluster; a "none" to a question with choices counts one for each cluster offered |
+| `MaxChecksPerItem` | 3 | Refusals an item takes before it starts its own cluster; a "none" to a question with choices counts one for each cluster offered |
 | `JoinChoices` | 3 | Clusters offered in one join question, nearest first; 1 asks yes or no about the nearest |
 | `MaxOpenQuestions` | 200 | Questions in flight at once; new items wait while it is reached. Lower is more accurate, higher is faster |
 | `CandidateClusters` | 10 | Nearest clusters fetched when placing an item (the nearest few are offered to the judge, up to `JoinChoices`; the rest stand in when they are empty or refused the item) and for each cluster in a merge check |
 | `MaxClustersPerMaintain` | 1,000 | Changed clusters one `MaintainAsync` checks; the next call continues after the last one checked, wrapping around, so every changed cluster gets its turn |
-| `MergeSimilarity` | 0.96 | At or above it, two clusters merge without a question |
-| `MergeCheckSimilarity` | 0.48 | At or above it (and below the merge threshold), a judge decides |
-| `MergeRespectsRefusals` | true | A merge is skipped when one cluster already refused an item in the other ([why](#algorithms)) |
+| `MergeSimilarity` | 0.72 | At or above it, two clusters merge without a question |
+| `MergeCheckSimilarity` | 0.55 | At or above it (and below the merge threshold), a judge decides |
+| `MergeRefusals` | `Ask` | When one cluster already refused an item in the other, a judge decides; the pair is never merged on similarity alone (`Block` never merges it, `Ignore` disregards the refusal; [why](#algorithms)) |
+| `MergeLinkage` | `Average` | Two clusters' similarity is the average similarity of their members, not of their centroids ([why](#algorithms)) |
 | `ExamplesPerQuestion` | 10 | Members nearest the center shown to the judge with a join question |
 | `MergeExamplesPerCluster` | 8 | Members of each cluster shown with a merge question |
 | `FailedAnswers` | 3 attempts, 1 s apart, doubling up to 5 minutes while every answer fails | A `Failed` answer never counts as a refusal: the question stays open and is asked again (the item waits). After the last attempt, a join is decided by similarity alone, and a merge pair is left unrecorded, so it is asked again once either cluster changes. `SettleAsync` waits `RetryDelay` after a round in which every answer failed |
@@ -391,9 +392,11 @@ Rules the clusterer keeps:
   label) is `Unanswerable`. `IncludeLabels` can keep labels out of the prompts.
 - `DelegateJudge`: wraps a function, for rules or tests.
 
-**Batch APIs.** `JudgePrompts.BuildAsync(question, texts)` returns the `ChatMessage`s that
-`ChatClientJudge` would send (`BuildJoin`, `BuildChoice` and `BuildMerge` take texts you
-already have), `JudgePrompts.CreateRequestOptions(options, choice)` the options it sends them
+**Batch APIs.** `JudgePrompts.BuildRequestsAsync(question, texts)` returns the requests
+`ChatClientJudge` would send (one for a join question, one per member asked each way for a
+merge question), and `JudgePrompts.ReadVerdict(question, requestCount, answers)` the verdict from their
+answers in any order. `BuildAsync` builds one prompt (`BuildJoin`, `BuildChoice` and
+`BuildMerge` take texts you already have), `JudgePrompts.CreateRequestOptions(options, choice)` the options it sends them
 with, and `JudgePrompts.TryParse(text, out bool same)` or, for a question with choices,
 `JudgePrompts.TryParseChoice(text, count, out int group)` reads an answer. Send the messages through a provider's batch API, then pass the verdicts to
 `AnswerAsync` when the batch ends. No live connection is needed.
@@ -548,18 +551,34 @@ The clusterer keeps the behavior of the unpublished pre-1.0 functions, with thes
    derives the centroid from it, so the centroid is the mean direction up to rounding,
    merges add sums, and removing a member subtracts it. `MaintainAsync` recomputes a
    cluster's sum from its members after many removals, so rounding cannot build up.
-2. **Refusals bind merges.** In the earlier experiments, 6% of items ended up in a cluster
-   that had refused them, carried there by a later merge. `MergeRespectsRefusals` skips such merges.
-   Expected effect: small (about one point of fit); measured in the evaluation.
-3. **Candidates from the store.** Each item is compared with its `CandidateClusters` nearest
+2. **Refusals bear on merges, and a judge decides.** In the earlier experiments, 6% of items
+   ended up in a cluster that had refused them, carried there by a later merge, so 1.0
+   skipped such merges. On texts written to one template that blocked most merges that
+   mattered: a "none" to three choices refuses all three clusters, and on 3,000 statements of
+   the complaints development set, 86 of 127 pairs of clusters with centroids at 0.88 or more
+   were never asked about. 1.1 leaves such
+   pairs to a judge (`MergeRefusals = Ask`): never merged on similarity alone, always asked.
+   `Block` keeps the 1.0 behavior. Allowing those merges is safe only with the next change.
+3. **Clusters compared by their members.** 1.0 compared two clusters by their centroids. A
+   centroid averages away what sets its members apart and keeps what they share, so on texts
+   written to one template it drifts toward every other centroid as a cluster grows mixed: on
+   need statements written from public complaints, two clusters of 50 unrelated statements
+   scored 0.98 by their centroids, above 1.0's merge threshold of 0.96, against 0.47 for the
+   average similarity of their members. Refusals had been hiding this; with them out of the
+   way, merges snowballed into a handful of catch-all clusters. Many of the "near-identical"
+   pairs above were such mixed clusters. 1.1 compares clusters by the average similarity of a
+   member of one to a member of the other (`MergeLinkage = Average`), the dot product of their
+   sums over the product of their sizes: no extra reads, equal to the cosine for single items,
+   and it does not rise as clusters grow mixed. Neighbors are still found by their centroids.
+4. **Candidates from the store.** Each item is compared with its `CandidateClusters` nearest
    clusters from the store's index, not with every cluster, and merge checks cover only
    clusters that changed since the last `MaintainAsync`, with their nearest neighbors. The
    pair-based `FindMerges` already guarantees the same decisions as the all-pairs check
    whenever the close pairs are among the candidates.
-4. **Settled pairs stay settled.** A pair a judge called different, and the parts of a split,
+5. **Settled pairs stay settled.** A pair a judge called different, and the parts of a split,
    are recorded, so a later certain merge does not undo the decision. `RefusedBy` lists only
    grow (an item's removal does not lift its refusal): conservative, and cheap to keep.
-5. **Your rules for merges.** An optional `IMergePolicy` is asked about each pair before a
+6. **Your rules for merges.** An optional `IMergePolicy` is asked about each pair before a
    merge, certain or judged, and before a merge question: `Never` keeps the pair apart (for
    clusters of different tenants or languages, or a pair a person separated) and costs no
    question; `KeepFirst` or `KeepSecond` chooses which keeps its id (for a cluster with a

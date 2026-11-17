@@ -38,20 +38,21 @@ public static class Evaluator
     /// <summary>Akinly with a judge, on a given clusterer, so its clusters can be inspected afterwards.</summary>
     public static async Task<(Scores Scores, double Seconds)> JudgedOnAsync(
         Clusterer clusterer, IReadOnlyList<LabeledText> order, IReadOnlyDictionary<string, float[]> vectors, IClusterJudge judge,
-        int batchSize, CancellationToken cancellationToken, Action<int, double>? progress = null)
+        int batchSize, CancellationToken cancellationToken, Action<int, double>? progress = null, Action<ClusteringStep>? observe = null)
     {
         var watch = Stopwatch.StartNew();
         var done = 0;
         foreach (var batch in order.Chunk(batchSize))
         {
-            await clusterer.SettleAsync(batch.Select(t => new ClusterItem(t.Id, vectors[t.Id])), judge, cancellationToken).ConfigureAwait(false);
-            await clusterer.MaintainAsync(cancellationToken).ConfigureAwait(false);
-            await clusterer.SettleAsync(judge, cancellationToken).ConfigureAwait(false);
+            var step = await clusterer.SettleAsync(batch.Select(t => new ClusterItem(t.Id, vectors[t.Id])), judge, cancellationToken).ConfigureAwait(false);
+            step = step.Then(await clusterer.MaintainAsync(cancellationToken).ConfigureAwait(false));
+            step = step.Then(await clusterer.SettleAsync(judge, cancellationToken).ConfigureAwait(false));
+            observe?.Invoke(step);
             done += batch.Length;
             progress?.Invoke(done, watch.Elapsed.TotalSeconds);
         }
 
-        await SettleMaintenanceAsync(clusterer, judge, cancellationToken).ConfigureAwait(false);
+        await SettleMaintenanceAsync(clusterer, judge, cancellationToken, observe).ConfigureAwait(false);
         return (await ScoreAsync(clusterer, order, cancellationToken).ConfigureAwait(false), watch.Elapsed.TotalSeconds);
     }
 
@@ -70,7 +71,7 @@ public static class Evaluator
     }
 
     /// <summary>Maintenance until nothing changes: the clustering a long-running service would settle into.</summary>
-    private static async Task SettleMaintenanceAsync(Clusterer clusterer, IClusterJudge? judge, CancellationToken cancellationToken)
+    private static async Task SettleMaintenanceAsync(Clusterer clusterer, IClusterJudge? judge, CancellationToken cancellationToken, Action<ClusteringStep>? observe = null)
     {
         for (var round = 0; round < MaxSettleRounds; round++)
         {
@@ -79,6 +80,8 @@ public static class Evaluator
             {
                 step = step.Then(await clusterer.SettleAsync(judge, cancellationToken).ConfigureAwait(false));
             }
+
+            observe?.Invoke(step);
 
             if (step.Merges.Count == 0 && step.Questions.Count == 0 && step.Splits.Count == 0
                 && (await clusterer.Store.GetChangedClustersAsync(0, 1, cancellationToken).ConfigureAwait(false)).Count == 0)

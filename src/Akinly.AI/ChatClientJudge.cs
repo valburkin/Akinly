@@ -7,9 +7,11 @@ namespace Akinly.AI;
 
 /// <summary>
 /// A judge that asks a language model through any <see cref="IChatClient"/>: a local model
-/// (Ollama, for one) or a cloud one. Each question gets its own short request with the
-/// cluster's label and its members nearest its center; the model answers <c>{"same": true}</c> or
-/// <c>{"same": false}</c>.
+/// (Ollama, for one) or a cloud one. A join question gets its own short request with the
+/// cluster's label and its members nearest its center; a merge question, by default, two such
+/// requests, each cluster's most central member against the other (see
+/// <see cref="ChatClientJudgeOptions.MergeMembersEachWay"/>). The model answers
+/// <c>{"same": true}</c> or <c>{"same": false}</c>.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -71,28 +73,47 @@ public sealed class ChatClientJudge : IClusterJudge
 
     private async Task<Verdict> AskAsync(Question question, CancellationToken cancellationToken)
     {
+        // The limit is per request: it starts again for each of a question's requests.
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        if (_options.RequestTimeout is { } limit)
+        var limit = _options.RequestTimeout;
+        if (limit is { } first)
         {
-            timeout.CancelAfter(limit);
+            timeout.CancelAfter(first);
         }
 
         try
         {
-            var messages = await JudgePrompts.BuildAsync(question, _texts, _options, timeout.Token).ConfigureAwait(false);
-            if (messages is null)
+            var requests = await JudgePrompts.BuildRequestsAsync(question, _texts, _options, timeout.Token).ConfigureAwait(false);
+            if (requests is null)
             {
                 return Verdict.Unanswerable(question.Id);
             }
 
+            // One by one, stopping at the first no: a no settles a merge asked by members, and
+            // the verdict is the same as if every request had been sent.
             var choice = question is JoinQuestion { OtherChoices.Count: > 0 };
-            var response = await _chat.GetResponseAsync(messages, JudgePrompts.CreateRequestOptions(_options, choice), timeout.Token).ConfigureAwait(false);
-            if (JudgePrompts.TryReadVerdict(question, response.Text, out var verdict))
+            var answers = new List<string?>();
+            foreach (var messages in requests)
             {
-                return verdict;
+                if (limit is { } each)
+                {
+                    timeout.CancelAfter(each);
+                }
+
+                var response = await _chat.GetResponseAsync(messages, JudgePrompts.CreateRequestOptions(_options, choice), timeout.Token).ConfigureAwait(false);
+                answers.Add(response.Text);
+                if (!choice && JudgePrompts.ReadAnswer(question, answers.Count - 1, response.Text) == false)
+                {
+                    break;
+                }
             }
 
-            Log.UnreadableAnswer(_logger, question.Id.Value);
+            var verdict = JudgePrompts.ReadVerdict(question, requests.Count, answers);
+            if (verdict.Kind == VerdictKind.Failed)
+            {
+                Log.UnreadableAnswer(_logger, question.Id.Value);
+            }
+
             return verdict;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)

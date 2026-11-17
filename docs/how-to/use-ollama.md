@@ -33,15 +33,15 @@ var ollama = new Uri("http://localhost:11434");
 using var embedder = new OllamaApiClient(ollama, "qwen3-embedding:8b");
 using var chat = new OllamaApiClient(ollama, "gemma4:12b");
 
-// Calibrated for qwen3-embedding:8b. The defaults (join 0.83, check 0.30, merge 0.96,
-// merge check 0.48) are for OpenAI's text-embedding-3-small.
+// Calibrated for qwen3-embedding:8b. The defaults (join 0.83, check 0.30, merge 0.72,
+// merge check 0.55) are for OpenAI's text-embedding-3-small.
 var options = new ClusteringOptions
 {
     EmbeddingModel = "qwen3-embedding:8b",
     JoinSimilarity = 0.96,
-    CheckSimilarity = 0.55,
-    MergeSimilarity = 0.97,
-    MergeCheckSimilarity = 0.71,
+    CheckSimilarity = 0.57,
+    MergeSimilarity = 1.0,   // no similarity was safe without a judge
+    MergeCheckSimilarity = 0.75,
 };
 
 // A short answer needs no long reasoning: ask the model not to think, which is faster.

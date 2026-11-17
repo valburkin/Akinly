@@ -20,9 +20,9 @@ The options come from the `Akinly` section of `appsettings.json`:
   "Akinly": {
     "EmbeddingModel": "bge-m3",
     "JoinSimilarity": 0.96,
-    "CheckSimilarity": 0.52,
-    "MergeSimilarity": 0.985,
-    "MergeCheckSimilarity": 0.66,
+    "CheckSimilarity": 0.54,
+    "MergeSimilarity": 0.88,
+    "MergeCheckSimilarity": 0.75,
     "MaxOpenQuestions": 200,
     "FailedAnswers": { "MaxAttempts": 3, "RetryDelay": "00:00:02" }
   }

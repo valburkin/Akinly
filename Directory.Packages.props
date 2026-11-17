@@ -46,6 +46,7 @@
     <PackageVersion Include="Microsoft.Extensions.AI" Version="11.0.0" />
     <PackageVersion Include="Anthropic" Version="13.8.0" />
     <PackageVersion Include="Microsoft.Extensions.AI.OpenAI" Version="11.0.0" />
+    <PackageVersion Include="Parquet.Net" Version="6.1.0" />
   </ItemGroup>
 
   <!-- Tests -->

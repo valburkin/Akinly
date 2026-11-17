@@ -104,6 +104,149 @@ public static partial class JudgePrompts
         }
     }
 
+    /// <summary>
+    /// Every request a question needs, the way a <see cref="ChatClientJudge"/> asks it: one for a
+    /// join question; for a merge question, with <see cref="ChatClientJudgeOptions.MergeMembersEachWay"/>
+    /// above 0, a yes-or-no join question for each of that many members of each cluster (those
+    /// nearest its centroid, the first of <see cref="MergeQuestion.ExampleItemIds"/> and
+    /// <see cref="MergeQuestion.OtherExampleItemIds"/>) against the other cluster. Send them in
+    /// any order, all at once or one by one, each with
+    /// <see cref="CreateRequestOptions(ChatClientJudgeOptions?, bool)"/> (<c>choice</c> true only
+    /// for a join question with choices), and pass the answers to <see cref="ReadVerdict"/>, or
+    /// read them one at a time with <see cref="ReadAnswer"/>. The same question, texts and options
+    /// always give the same requests in the same order: the first cluster's members, then the
+    /// other's, in the order of the question's example ids. A member whose text is gone gives way
+    /// to the next example member that has one, so a text removed between two builds can change
+    /// the requests: build them again from the question, and start again from the first.
+    /// </summary>
+    /// <param name="question">The question.</param>
+    /// <param name="texts">Where the items' texts are.</param>
+    /// <param name="options">The judge's options; the defaults when null.</param>
+    /// <param name="cancellationToken">Cancels the work.</param>
+    /// <returns>
+    /// The requests, or null when the question cannot be put fairly (see <see cref="BuildAsync"/>;
+    /// for a merge asked by members, when no member of one cluster has a text left). Answer such a
+    /// question <see cref="VerdictKind.Unanswerable"/>.
+    /// </returns>
+    public static async Task<IReadOnlyList<IList<ChatMessage>>?> BuildRequestsAsync(
+        Question question, IItemTextSource texts, ChatClientJudgeOptions? options = null, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(question);
+        ArgumentNullException.ThrowIfNull(texts);
+        options ??= new ChatClientJudgeOptions();
+        if (question is not MergeQuestion { ExampleItemIds.Count: > 0, OtherExampleItemIds.Count: > 0 } merge || options.MergeMembersEachWay == 0)
+        {
+            // A merge whose clusters show no members is asked as a whole, on their labels.
+            var single = await BuildAsync(question, texts, options, cancellationToken).ConfigureAwait(false);
+            return single is null ? null : [single];
+        }
+
+        var requests = new List<IList<ChatMessage>>();
+        foreach (var (members, clusterId, label, examples) in new[]
+        {
+            (merge.ExampleItemIds, merge.OtherClusterId, merge.OtherClusterLabel, merge.OtherExampleItemIds),
+            (merge.OtherExampleItemIds, merge.ClusterId, merge.ClusterLabel, merge.ExampleItemIds),
+        })
+        {
+            // The members nearest the centroid; one whose text is gone gives way to the next.
+            var asked = 0;
+            foreach (var member in members)
+            {
+                if (asked == options.MergeMembersEachWay)
+                {
+                    break;
+                }
+
+                var join = new JoinQuestion(merge.Id, member, clusterId, merge.Similarity, label, examples);
+                if (await BuildAsync(join, texts, options, cancellationToken).ConfigureAwait(false) is { } messages)
+                {
+                    requests.Add(messages);
+                    asked++;
+                }
+            }
+
+            if (asked == 0)
+            {
+                return null;
+            }
+        }
+
+        return requests;
+    }
+
+    /// <summary>
+    /// One answer to one of a question's requests (<see cref="BuildRequestsAsync"/>), for a host
+    /// that sends them one after another: true for yes (send the next request; after the last,
+    /// the verdict is <see cref="VerdictKind.Same"/>), false for no (the verdict is
+    /// <see cref="VerdictKind.Different"/>, and no further request is needed), null when it could
+    /// not be read (the verdict can no longer be <see cref="VerdictKind.Same"/>: send the rest, as
+    /// <see cref="ChatClientJudge"/> does, since a later no still makes it
+    /// <see cref="VerdictKind.Different"/>, or stop and take <see cref="VerdictKind.Failed"/>).
+    /// <see cref="ReadVerdict"/> combines exactly these readings, so a host that sends the
+    /// requests together reaches the same verdict.
+    /// </summary>
+    /// <param name="question">The question: a merge question, or a join question without choices.</param>
+    /// <param name="requestIndex">The request's place in the list <see cref="BuildRequestsAsync"/> returned, from 0.</param>
+    /// <param name="answer">The model's answer; null for one that never came.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="question"/> is null.</exception>
+    /// <exception cref="ArgumentException">The question is a join question with choices (read its one answer with <see cref="TryReadVerdict"/>), or the index is negative, or above 0 for a join question.</exception>
+    public static bool? ReadAnswer(Question question, int requestIndex, string? answer)
+    {
+        ArgumentNullException.ThrowIfNull(question);
+        if (question is JoinQuestion { OtherChoices.Count: > 0 })
+        {
+            throw new ArgumentException("A join question with choices is answered with a group: read it with TryReadVerdict.", nameof(question));
+        }
+
+        if (requestIndex < 0 || (question is JoinQuestion && requestIndex > 0))
+        {
+            throw new ArgumentOutOfRangeException(nameof(requestIndex), requestIndex, "A join question has one request, 0; a merge question's start at 0.");
+        }
+
+        return TryParse(answer, out var same) ? same : null;
+    }
+
+    /// <summary>
+    /// The verdict on a question from the answers to its requests (<see cref="BuildRequestsAsync"/>),
+    /// in any order. A join question takes its one answer, as <see cref="TryReadVerdict"/> reads
+    /// it. A merge question, each answer read as <see cref="ReadAnswer"/> reads it, is
+    /// <see cref="VerdictKind.Different"/> if any answer is no, <see cref="VerdictKind.Failed"/>
+    /// if none is no but one could not be read or is missing, and <see cref="VerdictKind.Same"/>
+    /// only if every one of its requests was answered yes. So a host may also send the requests
+    /// one by one and stop at the first no, and a request that never came back (a batch that
+    /// dropped it) never counts as a yes.
+    /// </summary>
+    /// <param name="question">The question.</param>
+    /// <param name="requestCount">How many requests <see cref="BuildRequestsAsync"/> returned for it.</param>
+    /// <param name="answers">The model's answers to the requests sent, at most one per request; null for one that could not be read.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="question"/> or <paramref name="answers"/> is null.</exception>
+    /// <exception cref="ArgumentException">The request count is below 1, or above 1 for a join question, or there are more answers than requests.</exception>
+    public static Verdict ReadVerdict(Question question, int requestCount, IReadOnlyList<string?> answers)
+    {
+        ArgumentNullException.ThrowIfNull(question);
+        ArgumentNullException.ThrowIfNull(answers);
+        if (requestCount < 1 || (question is JoinQuestion && requestCount != 1))
+        {
+            throw new ArgumentOutOfRangeException(nameof(requestCount), requestCount, "A join question has one request, and a merge question at least one.");
+        }
+
+        if (answers.Count > requestCount)
+        {
+            throw new ArgumentException("There are more answers than requests.", nameof(answers));
+        }
+
+        if (question is JoinQuestion)
+        {
+            TryReadVerdict(question, answers.Count == 1 ? answers[0] : null, out var verdict);
+            return verdict;
+        }
+
+        var readings = answers.Select((answer, index) => ReadAnswer(question, index, answer)).ToList();
+        return readings.Contains(false) ? Verdict.Different(question.Id)
+            : readings.Contains(null) || readings.Count < requestCount ? Verdict.Failed(question.Id)
+            : Verdict.Same(question.Id);
+    }
+
     /// <summary>The messages for a join question, from texts you already have.</summary>
     /// <param name="clusterLabel">The cluster's label, or null.</param>
     /// <param name="memberTexts">Texts of members nearest the cluster's centroid.</param>

@@ -403,9 +403,9 @@ public sealed class DocsExampleTests
             {
                 ["Akinly:EmbeddingModel"] = "bge-m3",
                 ["Akinly:JoinSimilarity"] = "0.96",
-                ["Akinly:CheckSimilarity"] = "0.52",
-                ["Akinly:MergeSimilarity"] = "0.985",
-                ["Akinly:MergeCheckSimilarity"] = "0.66",
+                ["Akinly:CheckSimilarity"] = "0.54",
+                ["Akinly:MergeSimilarity"] = "0.88",
+                ["Akinly:MergeCheckSimilarity"] = "0.75",
                 ["Akinly:MaxOpenQuestions"] = "200",
                 ["Akinly:FailedAnswers:MaxAttempts"] = "3",
                 ["Akinly:FailedAnswers:RetryDelay"] = "00:00:02",
@@ -418,7 +418,7 @@ public sealed class DocsExampleTests
         using var provider = services.BuildServiceProvider();
 
         var options = provider.GetRequiredService<Clusterer>().Options;
-        Assert.Equal(("bge-m3", 0.52, 0.66, 200, TimeSpan.FromSeconds(2)), (options.EmbeddingModel, options.CheckSimilarity, options.MergeCheckSimilarity, options.MaxOpenQuestions, options.FailedAnswers.RetryDelay));
+        Assert.Equal(("bge-m3", 0.54, 0.75, 200, TimeSpan.FromSeconds(2)), (options.EmbeddingModel, options.CheckSimilarity, options.MergeCheckSimilarity, options.MaxOpenQuestions, options.FailedAnswers.RetryDelay));
         Assert.IsType<InMemoryClusterStore>(provider.GetRequiredService<IClusterStore>());
     }
 

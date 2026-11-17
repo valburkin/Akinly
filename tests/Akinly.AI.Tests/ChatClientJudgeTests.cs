@@ -98,15 +98,79 @@ public sealed class ChatClientJudgeTests
         Assert.InRange(chat.MaxInFlight, 1, 2);
     }
 
+    private static MergeQuestion Merge(IReadOnlyList<string> first, IReadOnlyList<string> second) =>
+        new(new QuestionId(9), 1, 2, 0.6, null, null, first, second);
+
+    [Fact]
+    public async Task A_merge_is_asked_as_joins_both_ways_and_merges_only_on_two_yeses()
+    {
+        var chat = new FakeChatClient(ByKeyword);
+        var judge = new ChatClientJudge(chat, Texts);
+
+        var verdict = (await judge.JudgeAsync([Merge(["heat", "rent"], ["m", "rent"])], default))[0];
+
+        // The furnace text is not about heating by keyword, so the second join says no.
+        Assert.Equal(Verdict.Different(new QuestionId(9)), verdict);
+        var asked = chat.Requests.Select(r => JsonDocument.Parse(r.Messages[1].Text).RootElement).ToList();
+        Assert.Equal(["My heating is broken", "The furnace stopped working"], asked.Select(a => a.GetProperty("new_text").GetString()));
+        Assert.Equal(["The furnace stopped working", "I can't afford the rent"], asked[0].GetProperty("group_members").EnumerateArray().Select(m => m.GetString()));
+
+        var yes = new ChatClientJudge(new FakeChatClient((_, _) => """{"same": true}"""), Texts);
+        Assert.Equal(Verdict.Same(new QuestionId(9)), (await yes.JudgeAsync([Merge(["heat"], ["m"])], default))[0]);
+    }
+
+    [Fact]
+    public async Task The_request_timeout_is_per_request()
+    {
+        // Each of the merge's two requests takes 0.6 s: within the 1 s limit, though both together are not.
+        var chat = new FakeChatClient((_, _) => """{"same": true}""") { Delay = TimeSpan.FromMilliseconds(600) };
+        var judge = new ChatClientJudge(chat, Texts, new ChatClientJudgeOptions { RequestTimeout = TimeSpan.FromSeconds(1) });
+
+        Assert.Equal(VerdictKind.Same, (await judge.JudgeAsync([Merge(["heat"], ["m"])], default))[0].Kind);
+        Assert.Equal(2, chat.Requests.Count);
+    }
+
+    [Fact]
+    public async Task The_first_no_settles_a_merge()
+    {
+        var chat = new FakeChatClient((_, _) => """{"same": false}""");
+        var judge = new ChatClientJudge(chat, Texts, new ChatClientJudgeOptions { MergeMembersEachWay = 2 });
+
+        Assert.Equal(VerdictKind.Different, (await judge.JudgeAsync([Merge(["heat", "rent"], ["m"])], default))[0].Kind);
+        Assert.Single(chat.Requests);
+    }
+
+    [Fact]
+    public async Task A_merge_by_members_is_unanswerable_without_texts_and_failed_on_an_unreadable_answer()
+    {
+        var yes = new ChatClientJudge(new FakeChatClient((_, _) => """{"same": true}"""), Texts);
+        var unreadable = new ChatClientJudge(new FakeChatClient((_, _) => "maybe"), Texts);
+
+        Assert.Equal(VerdictKind.Unanswerable, (await yes.JudgeAsync([Merge(["heat"], ["gone"])], default))[0].Kind);
+        Assert.Equal(VerdictKind.Failed, (await unreadable.JudgeAsync([Merge(["heat"], ["m"])], default))[0].Kind);
+    }
+
+    [Fact]
+    public async Task With_no_members_each_way_a_merge_is_asked_as_a_whole()
+    {
+        var chat = new FakeChatClient((_, _) => """{"same": true}""");
+        var judge = new ChatClientJudge(chat, Texts, new ChatClientJudgeOptions { MergeMembersEachWay = 0 });
+
+        Assert.Equal(VerdictKind.Same, (await judge.JudgeAsync([Merge(["heat"], ["m"])], default))[0].Kind);
+        var request = Assert.Single(chat.Requests);
+        Assert.True(JsonDocument.Parse(request.Messages[1].Text).RootElement.TryGetProperty("first_group", out _));
+    }
+
     [Fact]
     public void Invalid_options_are_refused()
     {
-        var options = new ChatClientJudgeOptions { Criterion = " ", MaxParallelRequests = 0, MaxTextLength = 0 };
+        var options = new ChatClientJudgeOptions { Criterion = " ", MaxParallelRequests = 0, MaxTextLength = 0, MergeMembersEachWay = -1 };
 
         var exception = Assert.Throws<ArgumentException>(() => new ChatClientJudge(new FakeChatClient(ByKeyword), Texts, options));
 
         Assert.Contains("Criterion", exception.Message, StringComparison.Ordinal);
         Assert.Contains("MaxParallelRequests", exception.Message, StringComparison.Ordinal);
         Assert.Contains("MaxTextLength", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("MergeMembersEachWay", exception.Message, StringComparison.Ordinal);
     }
 }

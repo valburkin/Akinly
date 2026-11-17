@@ -202,11 +202,12 @@ internal sealed class Session
                 continue;
             }
 
-            foreach (var (neighbor, similarity) in await CandidatesAsync(cluster.Centroid, _options.CandidateClusters, [cluster.Id]).ConfigureAwait(false))
+            // Neighbors are found by their centroids, then scored by MergeLinkage.
+            foreach (var (neighbor, _) in await CandidatesAsync(cluster.Centroid, _options.CandidateClusters, [cluster.Id]).ConfigureAwait(false))
             {
                 if (neighbor.Count > 0)
                 {
-                    pairs.TryAdd(MergeCheck.Key(cluster.Id, neighbor.Id), similarity);
+                    pairs.TryAdd(MergeCheck.Key(cluster.Id, neighbor.Id), Linkage(cluster, neighbor));
                 }
             }
         }
@@ -219,7 +220,8 @@ internal sealed class Session
         }
 
         // Certain merges: each cluster merges at most once per call, most similar pairs first.
-        // A pair a judge called different, or that a split just separated, stays apart.
+        // A pair a judge called different, or that a split just separated, stays apart; a pair
+        // with a refusal between them is left to a judge, or stays apart (MergeRefusals).
         var used = new HashSet<long>();
         foreach (var ((a, b), _) in ordered.Where(p => p.Value >= _options.MergeSimilarity))
         {
@@ -227,7 +229,8 @@ internal sealed class Session
             var y = await GetLiveAsync(b).ConfigureAwait(false);
             if (x is null || y is null || x.Id == y.Id || used.Contains(x.Id) || used.Contains(y.Id)
                 || _mergeChecks.GetValueOrDefault(MergeCheck.Key(x.Id, y.Id)) is { Outcome: VerdictKind.Different }
-                || await BlockedAsync(x, y).ConfigureAwait(false))
+                || await ForbiddenAsync(x, y).ConfigureAwait(false)
+                || await RefusedAsync(x, y).ConfigureAwait(false))
             {
                 continue;
             }
@@ -238,11 +241,13 @@ internal sealed class Session
             touched.Add(into);
         }
 
-        // Close calls: ask a judge, once per pair.
+        // Close calls: ask a judge, once per pair. Above the merge threshold, only pairs a refusal
+        // kept from merging on similarity are asked about (RefusalRule.Ask).
         if (_options.MergeCheckSimilarity < _options.MergeSimilarity)
         {
             var openPairs = await OpenMergePairsAsync().ConfigureAwait(false);
-            foreach (var ((a, b), similarity) in ordered.Where(p => p.Value >= _options.MergeCheckSimilarity && p.Value < _options.MergeSimilarity))
+            var askRefused = _options.MergeRefusals == RefusalRule.Ask;
+            foreach (var ((a, b), similarity) in ordered.Where(p => p.Value >= _options.MergeCheckSimilarity && (askRefused || p.Value < _options.MergeSimilarity)))
             {
                 var x = await GetLiveAsync(a).ConfigureAwait(false);
                 var y = await GetLiveAsync(b).ConfigureAwait(false);
@@ -253,7 +258,13 @@ internal sealed class Session
 
                 var key = MergeCheck.Key(x.Id, y.Id);
                 if (_mergeChecks.GetValueOrDefault(key) is not null || openPairs.Contains(key)
-                    || await BlockedAsync(x, y).ConfigureAwait(false))
+                    || await ForbiddenAsync(x, y).ConfigureAwait(false))
+                {
+                    continue;
+                }
+
+                var refused = await RefusedAsync(x, y).ConfigureAwait(false);
+                if ((refused && !askRefused) || (!refused && similarity >= _options.MergeSimilarity))
                 {
                     continue;
                 }
@@ -626,7 +637,7 @@ internal sealed class Session
         if (verdict == VerdictKind.Unanswerable)
         {
             // It can never be answered (a text is gone): settle the pair, so it costs no more
-            // calls; a certain merge can still join the two.
+            // calls; a certain merge can still join the two, unless a refusal keeps them apart.
             PutMergeCheck(new MergeCheck(key.Item1, key.Item2, VerdictKind.Unanswerable));
             return;
         }
@@ -642,14 +653,20 @@ internal sealed class Session
         var x = await ResolveAsync(question.ClusterId).ConfigureAwait(false);
         var y = await ResolveAsync(question.OtherClusterId).ConfigureAwait(false);
         if (x is not null && y is not null && x.Id != y.Id
-            && VectorMath.Similarity(x.Centroid, y.Centroid) >= _options.MergeCheckSimilarity
-            && !await BlockedAsync(x, y).ConfigureAwait(false))
+            && Linkage(x, y) >= _options.MergeCheckSimilarity
+            && !await ForbiddenAsync(x, y).ConfigureAwait(false)
+            && !(_options.MergeRefusals == RefusalRule.Block && await RefusedAsync(x, y).ConfigureAwait(false)))
         {
             await MergeAsync(x, y, PlacementReason.Judge).ConfigureAwait(false);
         }
     }
 
     // ---------------------------------------------------------------- merges and splits
+
+    /// <summary>The similarity of two clusters, measured as <see cref="ClusteringOptions.MergeLinkage"/> says.</summary>
+    private double Linkage(StoredCluster x, StoredCluster y) => _options.MergeLinkage == ClusterLinkage.Average
+        ? VectorMath.AverageSimilarity(x.Sum.Span, x.Count, y.Sum.Span, y.Count)
+        : VectorMath.Similarity(x.Centroid, y.Centroid);
 
     private async Task AskMergeAsync(StoredCluster x, StoredCluster y, double similarity)
     {
@@ -779,24 +796,17 @@ internal sealed class Session
         });
     }
 
+    /// <summary>Whether the merge policy forbids merging two clusters.</summary>
+    private async Task<bool> ForbiddenAsync(StoredCluster x, StoredCluster y) =>
+        await RuleAsync(x, y).ConfigureAwait(false) == MergeRule.Never;
+
     /// <summary>
-    /// Whether a merge of two clusters is skipped: the merge policy forbids it, or one refused a
-    /// member of the other.
+    /// Whether one of two clusters refused a member of the other, and the options consider it
+    /// (<see cref="ClusteringOptions.MergeRefusals"/> is not <see cref="RefusalRule.Ignore"/>).
     /// </summary>
-    private async Task<bool> BlockedAsync(StoredCluster x, StoredCluster y)
-    {
-        if (await RuleAsync(x, y).ConfigureAwait(false) == MergeRule.Never)
-        {
-            return true;
-        }
-
-        if (!_options.MergeRespectsRefusals)
-        {
-            return false;
-        }
-
-        return await RefusesAsync(x, y.Id).ConfigureAwait(false) || await RefusesAsync(y, x.Id).ConfigureAwait(false);
-    }
+    private async Task<bool> RefusedAsync(StoredCluster x, StoredCluster y) =>
+        _options.MergeRefusals != RefusalRule.Ignore
+        && (await RefusesAsync(x, y.Id).ConfigureAwait(false) || await RefusesAsync(y, x.Id).ConfigureAwait(false));
 
     /// <summary>The merge policy's rule for a pair, asked once per pair in a call.</summary>
     private async Task<MergeRule> RuleAsync(StoredCluster x, StoredCluster y)

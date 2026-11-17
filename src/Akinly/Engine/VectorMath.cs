@@ -11,6 +11,14 @@ internal static class VectorMath
     public static double Similarity(ReadOnlyMemory<float> a, ReadOnlyMemory<float> b) =>
         TensorPrimitives.Dot(a.Span, b.Span);
 
+    /// <summary>
+    /// The average cosine similarity of a member of one cluster to a member of the other, from
+    /// the sums of their unit vectors: the dot product of the sums over the product of the counts.
+    /// An empty cluster is similar to nothing (0).
+    /// </summary>
+    public static double AverageSimilarity(ReadOnlySpan<double> sum, int count, ReadOnlySpan<double> otherSum, int otherCount) =>
+        count == 0 || otherCount == 0 ? 0 : TensorPrimitives.Dot(sum, otherSum) / ((double)count * otherCount);
+
     /// <summary>A unit-length copy of a vector, or null when it is zero or not finite.</summary>
     public static float[]? UnitOrNull(ReadOnlySpan<float> vector)
     {

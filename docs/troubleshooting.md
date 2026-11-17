@@ -141,7 +141,7 @@ Most clusters hold one item, and items that say the same thing sit apart.
 
 - **Thresholds too high for the embedding model.** The defaults were calibrated for `text-embedding-3-small`; another model may put matching texts at lower similarities. [Calibrate](how-to/calibrate-thresholds.md).
 - **The judge refuses too much.** Its `Criterion` may be stricter than you mean; the default asks for "the same specific problem or request, so that one answer or fix would settle both". Loosen it for your data, or set `Preference = ClusteringPreference.Recall` with the matching thresholds from the calibration report.
-- **Few questions per item.** An item stops asking after `MaxChecksPerItem` (5) refusals, and a "none" to a question with choices counts one for each cluster offered. Raise it if items often belong to a cluster further down their nearest.
+- **Few questions per item.** An item stops asking after `MaxChecksPerItem` (3) refusals, and a "none" to a question with choices counts one for each cluster offered. Raise it if items often belong to a cluster further down their nearest.
 - **A failing judge.** Questions that fail every attempt are decided by similarity, which joins only at the join threshold. See [A judge that keeps failing](#a-judge-that-keeps-failing).
 - **No maintenance.** Merges happen only in `MaintainAsync`. With a `Clusterer`, call it after each batch, and more than once after a large one (each cluster merges at most once per call). `TextClusterer` runs it after every add unless `MaintainAfterAdd` is off.
 - **Splits in a cosine-only setup** with a high `Split.CohesionThreshold` cut clusters apart. Lower it or turn splits off.
@@ -153,7 +153,7 @@ A few clusters hold most items, and they mix different things.
 - **Thresholds too low for the embedding model.** Raise `JoinSimilarity` and `MergeSimilarity`, or calibrate.
 - **Cosine only on data where topics blur together.** No single threshold separates "the same topic" from "the same thing": add a judge for the band between them.
 - **The judge accepts too much.** Make `Criterion` more specific ("describing the same bug", not "about the same feature"), or set `Preference = ClusteringPreference.Precision` with the matching thresholds from the calibration report.
-- **`MergeRespectsRefusals` off** lets merges carry items into clusters that refused them. Keep it on.
+- **`MergeRefusals = Ignore`** lets merges carry items into clusters that refused them without asking. Keep the default, `Ask`.
 - **Very uniform data**, where every item sounds alike, grows broad clusters even with a judge. Labels help you see it; a stricter criterion, or splitting the stream by a field you already have (product, category), helps more.
 
 ## Items that never get a cluster
@@ -168,8 +168,8 @@ A few clusters hold most items, and they mix different things.
 
 - `MaintainAsync` has not run since they became close, or has not reached them yet: one call checks at most `MaxClustersPerMaintain` (1,000) changed clusters, and merges each cluster at most once.
 - A judge called the pair different, or a split separated them; such pairs stay apart for good.
-- One cluster refused an item now in the other (`MergeRespectsRefusals`).
-- Their centroids are below `MergeCheckSimilarity` (0.48), or below `MergeSimilarity` (0.96) with no judge.
+- One cluster refused an item now in the other, and `MergeRefusals` is `Block`. With `Ask`, the default, the pair is asked about; a judge may have called it different.
+- Their similarity (the average similarity of their members, `MergeLinkage`) is below `MergeCheckSimilarity` (0.55), or below `MergeSimilarity` (0.72) with no judge.
 - Your `IMergePolicy` answers `Never` for the pair.
 - Each is outside the other's `CandidateClusters` (10) nearest neighbors.
 - `MaxOpenQuestions` was reached, so the merge question waits for a later `MaintainAsync`.

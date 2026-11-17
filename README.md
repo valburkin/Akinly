@@ -71,9 +71,9 @@ var options = new ClusteringOptions
 {
     EmbeddingModel = "qwen3-embedding:8b",
     JoinSimilarity = 0.96,
-    CheckSimilarity = 0.55,
-    MergeSimilarity = 0.97,
-    MergeCheckSimilarity = 0.71,
+    CheckSimilarity = 0.57,
+    MergeSimilarity = 1.0,   // no similarity was safe without a judge
+    MergeCheckSimilarity = 0.75,
 };
 
 // A short answer needs no reasoning: with thinking off, the model answers much faster.
@@ -156,12 +156,12 @@ Each item is compared with its nearest clusters. Its similarity to the nearest o
 | Similarity to the nearest cluster | Zone | What happens |
 |---|---|---|
 | At or above `JoinSimilarity` (default 0.83) | Join | The item joins without a question |
-| From `CheckSimilarity` (default 0.30) up to the join threshold | Ask | A judge picks the cluster the item belongs in among its nearest (up to `JoinChoices`, default 3), or none. On "none", the next nearest clusters are tried, up to `MaxChecksPerItem` (default 5) refusals |
+| From `CheckSimilarity` (default 0.30) up to the join threshold | Ask | A judge picks the cluster the item belongs in among its nearest (up to `JoinChoices`, default 3), or none. On "none", the next nearest clusters are tried, up to `MaxChecksPerItem` (default 3) refusals |
 | Below `CheckSimilarity` | New | The item starts a cluster of its own |
 
-Only the middle zone costs a judge's answer, and it is where similarity alone cannot tell "the same thing" from "the same topic". The thresholds belong to an embedding model: the defaults were calibrated for OpenAI's `text-embedding-3-small` on public intent datasets, and `akinly-eval calibrate` (the evaluation tool in `tools/Akinly.Evaluation`, run from a clone of this repository) suggests values for another model from labeled data.
+Only the middle zone costs a judge's answer, and it is where similarity alone cannot tell "the same thing" from "the same topic". The thresholds belong to an embedding model: the defaults were calibrated for OpenAI's `text-embedding-3-small` on public intent datasets, and `akinly-eval calibrate` (the evaluation tool in `tools/Akinly.Evaluation`, run from a clone of this repository) suggests values for another model from labeled data. Where the ask zone starts also depends on your data: `ThresholdCalibrator` sets it from your own judge's answers.
 
-Placement happens in arrival order, so an early item can start a cluster that later turns out to duplicate another. **Maintenance** (`MaintainAsync`, which `TextClusterer` runs after each add) compares the clusters that changed with their neighbors and merges pairs in the same three zones: certain pairs at once, close pairs after a judge says yes. The larger cluster keeps its id. A judge's failure is never read as "different": the question is asked again, and after the last attempt similarity alone decides.
+Placement happens in arrival order, so an early item can start a cluster that later turns out to duplicate another. **Maintenance** (`MaintainAsync`, which `TextClusterer` runs after each add) compares the clusters that changed with their neighbors and merges pairs in the same three zones, by the average similarity of their members: certain pairs at once, close pairs after a judge says a member of each belongs in the other. The larger cluster keeps its id. A judge's failure is never read as "different": the question is asked again, and after the last attempt similarity alone decides.
 
 [Concepts](docs/concepts.md) explains each part in depth.
 
@@ -190,7 +190,7 @@ Placement happens in arrival order, so an early item can start a cluster that la
 
 ## Evaluation
 
-Akinly is measured on five public labeled datasets with `akinly-eval` (`tools/Akinly.Evaluation`), which anyone can rerun. Texts arrive one at a time, in one pass, and Akinly is never told how many groups there are (59 to 269 groups here). Four of the datasets are below (Tweets-T is in the full results). The table gives accuracy in percent on the test splits, and NMI over the whole News-T stream. The criterion is fitted to the data, and the thresholds are calibrated on other texts. The scores measure grouping quality only; lasting ids and incremental placement, which k-means lacks, are not scored. Each baseline uses the same embeddings as the Akinly row above it:
+Akinly 1.0 was measured on five public labeled datasets with `akinly-eval` (`tools/Akinly.Evaluation`), which anyone can rerun; 1.1's changes were measured on development samples, against 1.0's defaults ([Akinly 1.1 on development samples](docs/evaluation/README.md#akinly-11-on-development-samples)). Texts arrive one at a time, in one pass, and Akinly is never told how many groups there are (59 to 269 groups here). Four of the datasets are below (Tweets-T is in the full results). The table gives accuracy in percent on the test splits, and NMI over the whole News-T stream. The criterion is fitted to the data, and the thresholds are calibrated on other texts. The scores measure grouping quality only; lasting ids and incremental placement, which k-means lacks, are not scored. Each baseline uses the same embeddings as the Akinly row above it:
 
 | Setup | Method | Banking77 | CLINC150 | MASSIVE | News-T (NMI) |
 |---|---|---|---|---|---|

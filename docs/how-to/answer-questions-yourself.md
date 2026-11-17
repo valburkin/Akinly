@@ -79,7 +79,7 @@ foreach (var question in step.Questions.OfType<JoinQuestion>())
 ```
 
 - `Verdict.Same(id)` is the same as picking the question's own `ClusterId`.
-- `Verdict.Different(id)` counts as a refusal by every cluster offered, and each counts toward `MaxChecksPerItem` (5). The item then tries its next nearest clusters that have not refused it.
+- `Verdict.Different(id)` counts as a refusal by every cluster offered, and each counts toward `MaxChecksPerItem` (3). The item then tries its next nearest clusters that have not refused it.
 - A pick of a cluster that was not offered counts as `Failed`: the question stays open.
 - To ask only yes or no, set `JoinChoices` to 1; `OtherChoices` is then always empty.
 
@@ -153,7 +153,7 @@ While questions wait, the items they are about stay out of every cluster, and at
 
 ## Through a provider's batch API
 
-Several model providers run batch jobs: you upload many requests at once and collect the answers later, often at a lower price than live calls. `JudgePrompts` (in `Akinly.AI`) builds exactly the requests `ChatClientJudge` would send and reads the answers back, so you can send the questions as a batch and answer them when the batch ends. A join question with choices gets its own prompt (`ChoiceInstructions`) and answer format (`{"group": n}`), so build its request options with `choice: true`. `TryReadVerdict` reads either kind of answer into a verdict.
+Several model providers run batch jobs: you upload many requests at once and collect the answers later, often at a lower price than live calls. `JudgePrompts` (in `Akinly.AI`) builds exactly the requests `ChatClientJudge` would send and reads the answers back, so you can send the questions as a batch and answer them when the batch ends. `BuildRequestsAsync` returns every request a question needs: one for a join question, and for a merge question one for each member asked each way (`MergeMembersEachWay`, default 1, so two). Send them all in the same batch. `ReadVerdict` reads a question's answers, in any order, into one verdict: for a merge, any no is `Different`, all yes is `Same`. A join question with choices gets its own prompt (`ChoiceInstructions`) and answer format (`{"group": n}`), so build its request options with `choice: true`.
 
 ```csharp
 using System.Globalization;
@@ -164,7 +164,8 @@ using Microsoft.Extensions.AI;
 // The same settings a live judge would use: criterion, text length, labels.
 var judgeOptions = new ChatClientJudgeOptions { Criterion = ChatClientJudgeOptions.DefaultCriterion };
 
-// 1. Build a request for each open question not already sent.
+// 1. Build the requests for each open question not already sent: one for a join question,
+//    two for a merge question (one member of each cluster, asked about the other).
 var requests = new List<(string CustomId, IList<ChatMessage> Messages, ChatOptions Settings)>();
 var unanswerable = new List<Verdict>();
 foreach (var question in await clusterer.GetOpenQuestionsAsync())
@@ -174,15 +175,21 @@ foreach (var question in await clusterer.GetOpenQuestionsAsync())
         continue;   // already in a batch that has not ended
     }
 
-    var messages = await JudgePrompts.BuildAsync(question, texts, judgeOptions);
-    if (messages is null)
+    var built = await JudgePrompts.BuildRequestsAsync(question, texts, judgeOptions);
+    if (built is null)
     {
         unanswerable.Add(Verdict.Unanswerable(question.Id));   // a text is gone: similarity decides
         continue;
     }
 
     var choice = question is JoinQuestion { OtherChoices.Count: > 0 };   // answered {"group": n}, not {"same": ...}
-    requests.Add((question.Id.Value.ToString(CultureInfo.InvariantCulture), messages, JudgePrompts.CreateRequestOptions(judgeOptions, choice)));
+    for (var part = 0; part < built.Count; part++)
+    {
+        // The question, the request's place and how many requests the question has.
+        var customId = string.Create(CultureInfo.InvariantCulture, $"{question.Id.Value}-{part}-{built.Count}");
+        requests.Add((customId, built[part], JudgePrompts.CreateRequestOptions(judgeOptions, choice)));
+    }
+
     sent.Add(question.Id);
 }
 
@@ -194,18 +201,30 @@ await clusterer.AnswerAsync(unanswerable);
 //    JudgePrompts.ChoiceAnswerSchema ({"group": integer}) for a question with choices.
 await SubmitBatchAsync(requests);   // your code, for your provider
 
-// 3. When the batch has ended, read each answer and pass the verdicts back.
+// 3. When the batch has ended, gather each question's answers and pass the verdicts back.
 var open = (await clusterer.GetOpenQuestionsAsync()).ToDictionary(q => q.Id);
-var verdicts = new List<Verdict>();
+var answers = new Dictionary<QuestionId, (int RequestCount, List<string?> Replies)>();
 foreach (var (customId, text) in await ReadBatchResultsAsync())   // your code: the custom id and the model's text, or null on an error
 {
-    var id = new QuestionId(long.Parse(customId, CultureInfo.InvariantCulture));
+    var fields = customId.Split('-');
+    var id = new QuestionId(long.Parse(fields[0], CultureInfo.InvariantCulture));
     sent.Remove(id);
+    if (!answers.TryGetValue(id, out var entry))
+    {
+        answers[id] = entry = (int.Parse(fields[2], CultureInfo.InvariantCulture), []);
+    }
+
+    entry.Replies.Add(text);
+}
+
+var verdicts = new List<Verdict>();
+foreach (var (id, (requestCount, replies)) in answers)
+{
     if (open.TryGetValue(id, out var question))
     {
-        // An error or an unreadable answer reads as Failed: the question stays open for the next batch.
-        JudgePrompts.TryReadVerdict(question, text, out var verdict);
-        verdicts.Add(verdict);
+        // An error, an unreadable answer or a request that never came back reads as Failed,
+        // unless another answer says no: the question stays open for the next batch.
+        verdicts.Add(JudgePrompts.ReadVerdict(question, requestCount, replies));
     }
 }
 
@@ -213,13 +232,14 @@ var step = await clusterer.AnswerAsync(verdicts);
 // step.Questions holds any follow-up questions: send them in the next batch.
 ```
 
-Here `clusterer` is your `Clusterer`, `texts` your `IItemTextSource` (the texts by item id), and `sent` a `HashSet<QuestionId>` you keep between runs, so a question in a batch that has not ended is not sent twice. `SubmitBatchAsync` and `ReadBatchResultsAsync` stand for your provider's batch client.
+Here `clusterer` is your `Clusterer`, `texts` your `IItemTextSource` (the texts by item id), and `sent` a `HashSet<QuestionId>` you keep between runs, so a question in a batch that has not ended is not sent twice (when a batch ends, also remove the questions none of whose requests came back). `SubmitBatchAsync` and `ReadBatchResultsAsync` stand for your provider's batch client.
 
 How this differs from a live judge:
 
 - **Answers are matched by question id**, so the order of results does not matter, and a result for a question already answered is ignored.
 - **Raise `MaxOpenQuestions`** if you want large batches: at most that many questions are open at once (default 200), and the items that would ask more wait until answers make room. Lower values are more accurate, because an item placed while its neighbors' answers are out cannot see where they went; a batch trades some of that for price.
 - **Run `MaintainAsync`** after each batch of answers, and send its merge questions in the next batch.
+- **A merge is asked by its members.** With the default `MergeMembersEachWay = 1`, a merge question becomes two yes-or-no join requests: whether the most central member of each cluster belongs in the other. Send both in the same batch: `ReadVerdict` needs a yes to every request for a `Same` (it is told how many there were, so one that never came back is never taken for a yes), and a single no is enough for a `Different`. Or, to pay for fewer requests (most merge questions are answered no), send them one after another: read each answer with `ReadAnswer(question, index, answer)`, send the next on a yes or an unreadable answer, and answer `Different` on a no; after the last, pass all the answers to `ReadVerdict`. Both ways reach the same verdict. The requests come in a fixed order, so you can build them again from the open question when its answer arrives. Set `MergeMembersEachWay = 0` for one request that compares the two groups as a whole, as 1.0 did.
 - **`TryParse`** reads `{"same": true}` in the answer, also inside a code fence or after a model's reasoning, and a bare `yes`, `no`, `true` or `false`. **`TryParseChoice`** reads `{"group": n}` the same way, with `n` from 0 to the number of groups offered. `TryReadVerdict` uses the right one for the question and maps a group to its cluster (1 is the question's own cluster, then `OtherChoices` in order, 0 is none); anything it cannot read is `Failed`.
 - **Temperature.** The settings carry a temperature of 0 only with `UseZeroTemperature` on (off by default, since current Claude models and OpenAI's reasoning models reject one).
 

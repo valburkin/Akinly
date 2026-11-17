@@ -83,7 +83,7 @@ A question is a record the clusterer hands back when similarity cannot decide. T
 | Kind | Asks | Carries |
 |---|---|---|
 | `JoinQuestion` | Which of these clusters, if any, does this item belong in? | `ItemId`, `ClusterId` (the nearest), `Similarity`, `ClusterLabel`, `ExampleItemIds` (up to `ExamplesPerQuestion`, 10, members nearest the centroid, nearest first), and `OtherChoices`: the next nearest clusters, each a `JoinChoice(ClusterId, Similarity, ClusterLabel, ExampleItemIds)` |
-| `MergeQuestion` | Are these two clusters one? | `ClusterId`, `OtherClusterId`, `Similarity` of the centroids, both labels, `ExampleItemIds` and `OtherExampleItemIds` (up to `MergeExamplesPerCluster`, 8, each) |
+| `MergeQuestion` | Are these two clusters one? | `ClusterId`, `OtherClusterId`, `Similarity` of the two clusters (by default the average similarity of their members, `MergeLinkage`), both labels, `ExampleItemIds` and `OtherExampleItemIds` (up to `MergeExamplesPerCluster`, 8, each) |
 
 Every question has an `Id` (a `QuestionId` wrapping a `long`), handed out in order by the store. A question carries everything a judge needs except the texts, so it can be answered later, elsewhere, or in a provider's batch: store the questions, and pass the answers to `AnswerAsync` whenever they arrive. The judge looks up the texts by id. Why examples rather than the whole cluster: in the measurements behind the design (on private data, see [the design record](design.md#what-we-know-already)), the label and the ten members nearest the center served a judge as well as the whole cluster, at a fraction of the tokens.
 
@@ -114,9 +114,11 @@ Rules the clusterer keeps for answers:
 
 ## Refusals
 
-When a judge answers `Different` to a join question, every cluster the question offered has **refused** the item: the nearest, and each of `OtherChoices`. The item is then compared with its next nearest cluster that has not refused it: it may join it by similarity, be asked about it, or start a cluster of its own. Each refusal counts toward `MaxChecksPerItem` (5), so a "none" to a question that offered three clusters counts three. Once an item has that many refusals, it is asked no more, and joins a cluster only at the join threshold. With the defaults, an item costs at most two join questions when each offers three clusters, and up to five when each offers one.
+When a judge answers `Different` to a join question, every cluster the question offered has **refused** the item: the nearest, and each of `OtherChoices`. The item is then compared with its next nearest cluster that has not refused it: it may join it by similarity, be asked about it, or start a cluster of its own. Each refusal counts toward `MaxChecksPerItem` (3), so a "none" to a question that offered three clusters counts three. Once an item has that many refusals, it is asked no more, and joins a cluster only at the join threshold. With the defaults, an item costs at most one join question when each offers three clusters, and up to three when each offers one.
 
-Refusals last and follow merges: an item never joins, and is never asked about, a cluster that refused it, even after that cluster merged into another. With `MergeRespectsRefusals` (on by default), a merge is skipped when one cluster refused an item that is now in the other, because otherwise the merge would carry the item into a cluster that said no to it. A refusal is not lifted when the item is later removed.
+Refusals last and follow merges: an item never joins, and is never asked about, a cluster that refused it, even after that cluster merged into another. A refusal is not lifted when the item is later removed.
+
+A refusal also bears on merges, as `MergeRefusals` says. When one cluster refused an item that is now in the other, merging them would carry the item into a cluster that said no to it. One item's refusal says little about whether two whole clusters are the same, though, and a "none" to three choices refuses all three. So by default (`RefusalRule.Ask`) such a pair is never merged on similarity alone, and a judge decides. `RefusalRule.Block` keeps it apart for good, as 1.0 did; on texts written to one template that left many near-identical clusters that were never even asked about. `RefusalRule.Ignore` merges it like any other pair.
 
 ## Precision or recall
 
@@ -142,17 +144,17 @@ Why a limit: an item placed while its neighbors' answers are out cannot see wher
 
 ## Merges
 
-Maintenance compares clusters with their neighbors in the same three zones, with their own thresholds:
+Maintenance compares clusters with their neighbors in the same three zones, with their own thresholds. Two clusters' similarity is the average similarity of a member of one to a member of the other (`MergeLinkage = Average`, the default). Their centroids would mislead: a centroid keeps what its members share and averages away what sets them apart, so two mixed clusters can have near-identical centroids though no member of one is close to any member of the other.
 
-| Similarity of the two centroids | What happens |
+| Average similarity of their members | What happens |
 |---|---|
-| At or above `MergeSimilarity` (0.96) | They merge without a question |
-| From `MergeCheckSimilarity` (0.48) up to the merge threshold | A `MergeQuestion` goes to the judge, once per pair |
+| At or above `MergeSimilarity` (0.72) | They merge without a question |
+| From `MergeCheckSimilarity` (0.55) up to the merge threshold | A `MergeQuestion` goes to the judge, once per pair |
 | Below `MergeCheckSimilarity` | Nothing |
 
 When two clusters merge, the larger keeps its id (on a tie, the lower id), takes the other's members, and keeps its label (or takes the other's if it had none). An [`IMergePolicy`](how-to/merge-policy.md) of your own can keep chosen pairs apart or choose which keeps its id. The result reports a `ClusterMerge(FromId, IntoId, Reason)`: update anything that stored `FromId`.
 
-A pair is never merged when a judge called it different, when a split separated it, when one cluster refused a member of the other (with `MergeRespectsRefusals`), or when your merge policy forbids it. Each cluster merges at most once per `MaintainAsync` call, most similar pairs first, so a chain of merges takes a few calls. Empty clusters are never merged or asked about.
+A pair is never merged when a judge called it different, when a split separated it, when one cluster refused a member of the other and `MergeRefusals` is `Block`, or when your merge policy forbids it. With the default, `Ask`, such a pair is asked about rather than merged on similarity, even above `MergeSimilarity`. Each cluster merges at most once per `MaintainAsync` call, most similar pairs first, so a chain of merges takes a few calls. Empty clusters are never merged or asked about.
 
 ## Splits
 

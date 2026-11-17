@@ -13,8 +13,8 @@ namespace Akinly.Storage;
 /// <param name="Changed">Whether it changed since the last merge check.</param>
 /// <param name="RemovalsSinceRecompute">Members removed since its sum was last recomputed from its members.</param>
 /// <param name="RefusedBy">
-/// The clusters that refused one of its members. A merge with one of them is skipped when
-/// <see cref="ClusteringOptions.MergeRespectsRefusals"/> is on.
+/// The clusters that refused one of its members. A merge with one of them is left to a judge, or
+/// skipped, as <see cref="ClusteringOptions.MergeRefusals"/> says.
 /// </param>
 /// <param name="LabeledAtCount">Its size when its label was set, or 0 when it has none: a labeler relabels it once it has grown.</param>
 public sealed record StoredCluster(

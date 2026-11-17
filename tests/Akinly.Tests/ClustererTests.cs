@@ -199,15 +199,74 @@ public sealed class ClustererTests
     }
 
     /// <summary>
+    /// Two clusters of two members each, built by a judge: every member shares one direction and
+    /// has one of its own, so any two members are 0.5 alike, the clusters' centroids 0.67, and the
+    /// average similarity of a member of one to a member of the other 0.5. Merges happen at 0.6,
+    /// with no question.
+    /// </summary>
+    private static async Task<(Clusterer Clusterer, ClusteringStep Step)> MixedClustersAsync(ClusterLinkage linkage)
+    {
+        static float[] Own(int axis)
+        {
+            var v = new float[5];
+            v[axis] = 1;
+            v[4] = 1;
+            return v;
+        }
+
+        var clusterer = Create(Judged(o =>
+        {
+            o.CheckSimilarity = 0.4;
+            o.MergeSimilarity = 0.6;
+            o.MergeCheckSimilarity = 0.6;
+            o.MergeRefusals = RefusalRule.Ignore;
+            o.MergeLinkage = linkage;
+        }));
+        var judge = new DelegateJudge(q => q is JoinQuestion j && (j.ItemId, j.ClusterId) is ("q", 1) or ("t", 2) ? VerdictKind.Same : VerdictKind.Different);
+        var step = await clusterer.SettleAsync([Item("p", Own(0)), Item("q", Own(1)), Item("r", Own(2)), Item("t", Own(3))], judge);
+        Assert.Equal((1L, 1L, 2L, 2L), (await clusterer.GetClusterOfAsync("p"), await clusterer.GetClusterOfAsync("q"), await clusterer.GetClusterOfAsync("r"), await clusterer.GetClusterOfAsync("t")));
+        return (clusterer, step.Then(await clusterer.MaintainAsync()));
+    }
+
+    [Fact]
+    public async Task By_average_similarity_mixed_clusters_with_alike_centroids_stay_apart()
+    {
+        var (_, step) = await MixedClustersAsync(ClusterLinkage.Average);
+
+        Assert.Empty(step.Merges);
+    }
+
+    [Fact]
+    public async Task By_centroid_similarity_mixed_clusters_with_alike_centroids_merge()
+    {
+        var (_, step) = await MixedClustersAsync(ClusterLinkage.Centroid);
+
+        Assert.Equal(new ClusterMerge(2, 1, PlacementReason.Similarity), Assert.Single(step.Merges));
+    }
+
+    [Fact]
+    public async Task A_merge_question_carries_the_average_similarity_of_the_members()
+    {
+        var clusterer = Create(Judged(o => (o.CheckSimilarity, o.MergeCheckSimilarity) = (0.9, 0.4)));
+        await clusterer.AddAsync([Item("a", At(0)), Item("b", At(2)), Item("c", At(40)), Item("d", At(42))]);
+
+        var question = Assert.IsType<MergeQuestion>(Assert.Single((await clusterer.MaintainAsync()).Questions));
+
+        var expected = (Math.Cos(40 * Math.PI / 180) + Math.Cos(42 * Math.PI / 180) + Math.Cos(38 * Math.PI / 180) + Math.Cos(40 * Math.PI / 180)) / 4;
+        Assert.Equal(expected, question.Similarity, 5);
+    }
+
+    /// <summary>
     /// Cluster 1 refuses b, which starts cluster 2; then cluster 1 grows toward cluster 2 until
     /// the pair is close enough to ask about.
     /// </summary>
-    private static async Task<Clusterer> RefusedPairAsync(bool mergeRespectsRefusals)
+    private static async Task<Clusterer> RefusedPairAsync(RefusalRule refusals, Action<ClusteringOptions>? adjust = null)
     {
         var clusterer = Create(Judged(o =>
         {
             o.MaxChecksPerItem = 1;
-            o.MergeRespectsRefusals = mergeRespectsRefusals;
+            o.MergeRefusals = refusals;
+            adjust?.Invoke(o);
         }));
         await clusterer.AddAsync([Item("a", At(0))]);
         var question = (await clusterer.AddAsync([Item("b", At(AngleFor(0.75)))])).Questions[0];
@@ -221,7 +280,80 @@ public sealed class ClustererTests
     [Fact]
     public async Task A_merge_is_skipped_when_one_cluster_refused_a_member_of_the_other()
     {
-        var clusterer = await RefusedPairAsync(mergeRespectsRefusals: true);
+        var clusterer = await RefusedPairAsync(RefusalRule.Block);
+
+        var step = await clusterer.MaintainAsync();
+
+        Assert.Empty(step.Merges);
+        Assert.Empty(step.Questions);
+    }
+
+    [Theory]
+    [InlineData(RefusalRule.Ask)]
+    [InlineData(RefusalRule.Ignore)]
+    public async Task Unless_refusals_block_the_same_pair_is_asked_about(RefusalRule refusals)
+    {
+        var clusterer = await RefusedPairAsync(refusals);
+
+        var step = await clusterer.MaintainAsync();
+
+        var question = Assert.IsType<MergeQuestion>(Assert.Single(step.Questions));
+        Assert.Equal((1, 2), (question.ClusterId, question.OtherClusterId));
+    }
+
+    [Fact]
+    public async Task When_refusals_ask_a_judge_a_yes_merges_the_refused_pair()
+    {
+        var clusterer = await RefusedPairAsync(RefusalRule.Ask);
+        var question = Assert.Single((await clusterer.MaintainAsync()).Questions);
+
+        var step = await clusterer.AnswerAsync([Verdict.Same(question.Id)]);
+
+        Assert.Equal(new ClusterMerge(2, 1, PlacementReason.Judge), Assert.Single(step.Merges));
+    }
+
+    [Fact]
+    public async Task When_refusals_block_a_late_yes_does_not_merge_the_refused_pair()
+    {
+        // Asked while refusals were ignored, answered after the rule changed to Block.
+        var store = new InMemoryClusterStore();
+        var first = new Clusterer(store, Judged(o =>
+        {
+            o.MaxChecksPerItem = 1;
+            o.MergeRefusals = RefusalRule.Ignore;
+        }));
+        await first.AddAsync([Item("a", At(0))]);
+        var refusal = (await first.AddAsync([Item("b", At(AngleFor(0.75)))])).Questions[0];
+        await first.AnswerAsync([Verdict.Different(refusal.Id)]);
+        await first.AddAsync([Item("c", At(20)), Item("d", At(21))]);
+        var question = Assert.Single((await first.MaintainAsync()).Questions);
+        var blocking = new Clusterer(store, Judged(o =>
+        {
+            o.MaxChecksPerItem = 1;
+            o.MergeRefusals = RefusalRule.Block;
+        }));
+
+        var step = await blocking.AnswerAsync([Verdict.Same(question.Id)]);
+
+        Assert.Empty(step.Merges);
+    }
+
+    [Fact]
+    public async Task When_refusals_ask_a_judge_a_refused_pair_above_the_merge_threshold_is_asked_not_merged()
+    {
+        // The merge threshold below the pair's similarity: without the refusal it would merge outright.
+        var clusterer = await RefusedPairAsync(RefusalRule.Ask, o => (o.MergeSimilarity, o.MergeCheckSimilarity) = (0.81, 0.6));
+
+        var step = await clusterer.MaintainAsync();
+
+        Assert.Empty(step.Merges);
+        Assert.IsType<MergeQuestion>(Assert.Single(step.Questions));
+    }
+
+    [Fact]
+    public async Task With_no_merge_ask_zone_a_refusal_that_asks_a_judge_keeps_the_pair_apart()
+    {
+        var clusterer = await RefusedPairAsync(RefusalRule.Ask, o => (o.MergeSimilarity, o.MergeCheckSimilarity) = (0.81, 0.81));
 
         var step = await clusterer.MaintainAsync();
 
@@ -230,14 +362,13 @@ public sealed class ClustererTests
     }
 
     [Fact]
-    public async Task With_refusals_ignored_the_same_pair_is_asked_about()
+    public async Task With_refusals_ignored_a_refused_pair_above_the_merge_threshold_merges()
     {
-        var clusterer = await RefusedPairAsync(mergeRespectsRefusals: false);
+        var clusterer = await RefusedPairAsync(RefusalRule.Ignore, o => (o.MergeSimilarity, o.MergeCheckSimilarity) = (0.81, 0.6));
 
         var step = await clusterer.MaintainAsync();
 
-        var question = Assert.IsType<MergeQuestion>(Assert.Single(step.Questions));
-        Assert.Equal((1, 2), (question.ClusterId, question.OtherClusterId));
+        Assert.Single(step.Merges);
     }
 
     [Fact]

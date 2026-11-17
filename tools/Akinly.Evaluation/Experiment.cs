@@ -45,7 +45,8 @@ public static class Experiment
         var model = Models.ModelName(embedder);
         var vectors = await Embeddings.GetAsync(texts, embedder, cache, cancellationToken).ConfigureAwait(false);
         var calibrationVectors = await Embeddings.GetAsync(calibrationTexts, embedder, cache, cancellationToken).ConfigureAwait(false);
-        var calibration = Calibrator.Run(calibrateOn, embedder, calibrationTexts, calibrationVectors, loss: double.Parse(arguments.Get("loss", "0.01"), CultureInfo.InvariantCulture), seed: seed, maxChecks: arguments.Number("calibrate-checks", 5, minimum: 1));
+        var linkage = Enum.Parse<ClusterLinkage>(arguments.Get("merge-linkage", "average"), ignoreCase: true);
+        var calibration = Calibrator.Run(calibrateOn, embedder, calibrationTexts, calibrationVectors, loss: double.Parse(arguments.Get("loss", "0.01"), CultureInfo.InvariantCulture), seed: seed, maxChecks: arguments.Number("calibrate-checks", 5, minimum: 1), linkage: linkage);
         // --prefer precision|recall: that preference's calibrated thresholds and the judge's
         // matching tie-break. --thresholds defaults: the library's defaults, no calibration.
         var prefer = Enum.Parse<Akinly.AI.ClusteringPreference>(arguments.Get("prefer", "balanced"), ignoreCase: true);
@@ -56,10 +57,11 @@ public static class Experiment
             _ => new ThresholdSet(calibration.JoinSimilarity, calibration.CheckSimilarity, calibration.MergeSimilarity, calibration.MergeCheckSimilarity),
         };
         var options = arguments.Get("thresholds", "calibrated") == "defaults"
-            ? new ClusteringOptions { EmbeddingModel = model }
+            ? new ClusteringOptions { EmbeddingModel = model, MergeLinkage = linkage }
             : new ClusteringOptions
             {
                 EmbeddingModel = model,
+                MergeLinkage = linkage,
                 JoinSimilarity = set.JoinSimilarity,
                 CheckSimilarity = set.CheckSimilarity,
                 MergeSimilarity = set.MergeSimilarity,
@@ -75,11 +77,13 @@ public static class Experiment
 
             var (name, value) = (setting[..equals], setting[(equals + 1)..]);
             var property = typeof(ClusteringOptions).GetProperty(name) ?? throw new ArgumentException($"No option {name}.");
-            property.SetValue(options, Convert.ChangeType(value, property.PropertyType, CultureInfo.InvariantCulture));
+            property.SetValue(options, property.PropertyType.IsEnum
+                ? Enum.Parse(property.PropertyType, value, ignoreCase: true)
+                : Convert.ChangeType(value, property.PropertyType, CultureInfo.InvariantCulture));
         }
 
         Console.WriteLine($"{dataset} {split} {texts.Count} texts, thresholds {arguments.Get("thresholds", "calibrated")} on {calibrateOn}, prefer {prefer}, {texts.Select(t => t.Label).Distinct().Count()} groups, {embedder}, judge {judgeSpec}");
-        Console.WriteLine($"join {options.JoinSimilarity} check {options.CheckSimilarity} merge {options.MergeSimilarity} merge-check {options.MergeCheckSimilarity} max-checks {options.MaxChecksPerItem} candidates {options.CandidateClusters} refusals {options.MergeRespectsRefusals}");
+        Console.WriteLine($"join {options.JoinSimilarity} check {options.CheckSimilarity} merge {options.MergeSimilarity} merge-check {options.MergeCheckSimilarity} max-checks {options.MaxChecksPerItem} choices {options.JoinChoices} candidates {options.CandidateClusters} refusals {options.MergeRefusals} linkage {options.MergeLinkage}");
 
         var labels = texts.ToDictionary(t => t.Id, t => t.Label, StringComparer.Ordinal);
         if (arguments.Has("probe"))
@@ -137,9 +141,34 @@ public static class Experiment
             inner = Evaluator.Judge(client, texts, Models.ChatOptions(judgeSpec), parallel, Models.AcceptsTemperature(judgeSpec), o => Prompts(arguments, o));
         }
 
-        var recorder = new RecordingJudge(inner, labels, texts.ToDictionary(t => t.Id, t => t.Text, StringComparer.Ordinal), Dump(arguments.Get("dump", ""), cache));
+        // --calibrate-floors N: the library's calibrator, with this judge, on N texts of the
+        // calibration pool (never the texts measured), sets the two floors.
+        if (arguments.Has("calibrate-floors") && chat is not null)
+        {
+            var pilot = Dataset.Sample(calibrationPool, arguments.Number("calibrate-floors", 1500, minimum: 50), seed + 2);
+            var pilotVectors = await Embeddings.GetAsync(pilot, embedder, cache, cancellationToken).ConfigureAwait(false);
+            var pilotJudge = Evaluator.Judge(chat, pilot, Models.ChatOptions(judgeSpec), parallel, Models.AcceptsTemperature(judgeSpec), o => Prompts(arguments, o));
+            var floors = await ThresholdCalibrator.CalibrateAsync(
+                Evaluator.Shuffle(pilot, seed + 3).Select(t => new ClusterItem(t.Id, pilotVectors[t.Id])), pilotJudge, options, cancellationToken: cancellationToken).ConfigureAwait(false);
+            Console.WriteLine($"calibrated floors on {pilot.Count} texts: check {floors.CheckSimilarity:0.00}, merge check {floors.MergeCheckSimilarity:0.00}");
+            Console.WriteLine("  join: " + string.Join("  ", floors.JoinBands.Select(b => $"{b.From:0.00}:{b.Yes}/{b.Questions}")));
+            Console.WriteLine("  merge: " + string.Join("  ", floors.MergeBands.Select(b => $"{b.From:0.00}:{b.Yes}/{b.Questions}")));
+            foreach (var warning in floors.Warnings)
+            {
+                Console.WriteLine("  warning: " + warning);
+            }
+
+            options = floors.ApplyTo(options);
+        }
+
+        var textsById = texts.ToDictionary(t => t.Id, t => t.Text, StringComparer.Ordinal);
+        var recorder = new RecordingJudge(inner, labels, textsById, Dump(arguments.Get("dump", ""), cache));
+        var report = new RunReport();
         var clusterer = new Clusterer(new InMemoryClusterStore(), options);
-        var (scores, seconds) = await Evaluator.JudgedOnAsync(clusterer, order, vectors, recorder, batch, cancellationToken).ConfigureAwait(false);
+        var (scores, seconds) = await Evaluator.JudgedOnAsync(
+            clusterer, order, vectors, report.Wrap(recorder), batch, cancellationToken,
+            (done, at) => Console.Error.Write($"\r  {done}/{order.Count} items, {TimeSpan.FromSeconds(at):hh\\:mm\\:ss}"), report.Observe).ConfigureAwait(false);
+        Console.Error.WriteLine();
         chat?.Dispose();
 
         Print($"akinly, judge {judgeSpec}", scores, seconds);
@@ -150,6 +179,9 @@ public static class Experiment
 
         recorder.Report();
         await DiagnoseAsync(clusterer, labels, options, cancellationToken).ConfigureAwait(false);
+        await report.PrintAsync(
+            clusterer, textsById, labels, arguments.Has("referee") ? arguments.Get("referee", "") : null,
+            arguments.Get("labeler", judgeSpec == "oracle" ? "ollama:gemma4:12b" : judgeSpec), arguments.Number("fit-sample", 300, minimum: 1), parallel, seed, cancellationToken).ConfigureAwait(false);
     }
 
     // The dump holds dataset texts, which some datasets may not be redistributed: a relative path
@@ -267,6 +299,20 @@ public static class Experiment
     private static string? Majority(IEnumerable<string> ids, Dictionary<string, string> labels) =>
         ids.GroupBy(id => labels[id]).OrderByDescending(g => g.Count()).ThenBy(g => g.Key, StringComparer.Ordinal).FirstOrDefault()?.Key;
 
+    // The average similarity of a member of one cluster to a member of the other, from their sums.
+    private static double AverageSimilarity(StoredCluster a, StoredCluster b)
+    {
+        var x = a.Sum.Span;
+        var y = b.Sum.Span;
+        var dot = 0.0;
+        for (var i = 0; i < Math.Min(x.Length, y.Length); i++)
+        {
+            dot += x[i] * y[i];
+        }
+
+        return dot / ((double)a.Count * b.Count);
+    }
+
     private static async Task DiagnoseAsync(Clusterer clusterer, Dictionary<string, string> labels, ClusteringOptions options, CancellationToken cancellationToken)
     {
         var clusters = new List<(StoredCluster Cluster, List<string> Members, string Label)>();
@@ -296,12 +342,13 @@ public static class Experiment
 
             var similarity = Vectors.Dot(c.Cluster.Centroid.ToArray(), h.Cluster.Centroid.ToArray());
             simBins[Math.Clamp((int)(similarity * 10), 0, 9)] += c.Members.Count;
+            var linkage = options.MergeLinkage == ClusterLinkage.Average ? AverageSimilarity(c.Cluster, h.Cluster) : similarity;
             var checks = await clusterer.Store.GetMergeChecksAsync([MergeCheck.Key(c.Cluster.Id, h.Cluster.Id)], cancellationToken).ConfigureAwait(false);
             var check = checks.Count > 0 ? checks[0] : null;
             var refused = c.Cluster.RefusedBy.Contains(h.Cluster.Id) || h.Cluster.RefusedBy.Contains(c.Cluster.Id);
             var reason = check is not null ? $"judged {check.Outcome}"
-                : refused && options.MergeRespectsRefusals ? "blocked by a refusal"
-                : similarity < options.MergeCheckSimilarity ? "below merge check"
+                : refused && options.MergeRefusals == RefusalRule.Block ? "blocked by a refusal"
+                : linkage < options.MergeCheckSimilarity ? "below merge check"
                 : "not a candidate / other";
             reasons[reason] = reasons.TryGetValue(reason, out var r) ? (r.Clusters + 1, r.Items + c.Members.Count) : (1, c.Members.Count);
         }
@@ -370,7 +417,7 @@ public static class Experiment
         }
     }
 
-    // --criterion, --join-prompt and --merge-prompt replace the judge's defaults, for prompt experiments.
+    // --criterion, --join-prompt, --merge-prompt and --merge-members replace the judge's defaults, for experiments.
     private static void Prompts(Arguments arguments, Akinly.AI.ChatClientJudgeOptions options)
     {
         if (arguments.Has("criterion"))
@@ -393,6 +440,11 @@ public static class Experiment
         if (arguments.Has("merge-prompt"))
         {
             options.MergeInstructions = arguments.Get("merge-prompt", "");
+        }
+
+        if (arguments.Has("merge-members"))
+        {
+            options.MergeMembersEachWay = arguments.Number("merge-members", 1, minimum: 0);
         }
     }
 }

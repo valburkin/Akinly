@@ -46,7 +46,8 @@ public static class Calibrator
 
     public static Calibration Run(
         string dataset, string embedder, IReadOnlyList<LabeledText> texts, IReadOnlyDictionary<string, float[]> vectors,
-        double precision = 0.95, double loss = 0.01, int seed = 1, int maxChecks = 5, int candidates = 10)
+        double precision = 0.95, double loss = 0.01, int seed = 1, int maxChecks = 5, int candidates = 10,
+        ClusterLinkage linkage = ClusterLinkage.Average)
     {
         var random = new Random(seed);
         var unit = texts.ToDictionary(t => t.Id, t => Vectors.Normalize(vectors[t.Id]), StringComparer.Ordinal);
@@ -83,26 +84,41 @@ public static class Calibrator
         // Merges: each group cut in two, a small fragment and the rest, every pair of parts
         // compared. A fragment is what the clusterer leaves apart: a few items that came early or
         // were refused, rarely half a group.
-        var parts = new List<(string Label, float[] Centroid)>();
+        var parts = new List<(string Label, float[] Centroid, double[] Sum, int Count)>();
         foreach (var group in texts.GroupBy(t => t.Label).Where(g => g.Count() >= 2).OrderBy(g => g.Key, StringComparer.Ordinal))
         {
             var members = group.OrderBy(_ => random.Next()).Select(t => unit[t.Id]).ToList();
             var cut = random.Next(1, Math.Min(MaxFragment, members.Count - 1) + 1);
-            parts.Add((group.Key, Vectors.Mean([.. members.Take(cut)])));
-            parts.Add((group.Key, Vectors.Mean([.. members.Skip(cut)])));
+            foreach (var part in new[] { members.Take(cut).ToList(), members.Skip(cut).ToList() })
+            {
+                var partSum = new double[part[0].Length];
+                foreach (var member in part)
+                {
+                    for (var d = 0; d < partSum.Length; d++)
+                    {
+                        partSum[d] += member[d];
+                    }
+                }
+
+                parts.Add((group.Key, Direction(partSum), partSum, part.Count));
+            }
         }
 
         var pairs = new List<(double Similarity, bool Right)>();
         var twins = new List<(double Similarity, int Rank)>();
+        // Neighbors are ranked by their centroids, as the clusterer finds them, and scored by the linkage.
+        double Linked(int i, int j) => linkage == ClusterLinkage.Average
+            ? System.Numerics.Tensors.TensorPrimitives.Dot(parts[i].Sum, parts[j].Sum) / ((double)parts[i].Count * parts[j].Count)
+            : Vectors.Dot(parts[i].Centroid, parts[j].Centroid);
         for (var i = 0; i < parts.Count; i++)
         {
             var ranked = Enumerable.Range(0, parts.Count).Where(j => j != i)
                 .Select(j => (Index: j, Similarity: Vectors.Dot(parts[i].Centroid, parts[j].Centroid))).OrderByDescending(p => p.Similarity).ToList();
-            pairs.AddRange(ranked.Where(p => p.Index > i).Select(p => (p.Similarity, parts[p.Index].Label == parts[i].Label)));
+            pairs.AddRange(ranked.Where(p => p.Index > i).Select(p => (Linked(i, p.Index), parts[p.Index].Label == parts[i].Label)));
             if (i % 2 == 0)
             {
                 var rank = ranked.FindIndex(p => parts[p.Index].Label == parts[i].Label);
-                twins.Add((ranked[rank].Similarity, rank + 1));
+                twins.Add((Linked(i, ranked[rank].Index), rank + 1));
             }
         }
 
@@ -235,9 +251,9 @@ public static class Calibrator
         text.AppendLine();
         text.AppendLine("| Option | Value | Why |");
         text.AppendLine("|---|---|---|");
-        text.AppendLine(culture, $"| `JoinSimilarity` | {c.JoinSimilarity:0.00#} | At or above it, the nearest cluster was the item's own {Percent(c.JoinPrecision)} of the time; {Percent(c.JoinRecall)} of the items whose group had a cluster joined it without a question |");
+        text.AppendLine(culture, $"| `JoinSimilarity` | {c.JoinSimilarity:0.00#} | {(c.JoinPrecision is null ? "No item was this close to a cluster" : $"At or above it, the nearest cluster was the item's own {Percent(c.JoinPrecision)} of the time")}; {Percent(c.JoinRecall)} of the items whose group had a cluster joined it without a question |");
         text.AppendLine(culture, $"| `CheckSimilarity` | {c.CheckSimilarity:0.00#} | {Percent(c.CheckRecall)} of the items whose group had a cluster would have it put to a judge: among their nearest that a judge is asked about, and at least this close |");
-        text.AppendLine(culture, $"| `MergeSimilarity` | {c.MergeSimilarity:0.00#} | At or above it, a pair of parts was of one group {Percent(c.MergePrecision)} of the time |");
+        text.AppendLine(culture, $"| `MergeSimilarity` | {c.MergeSimilarity:0.00#} | {(c.MergePrecision is null ? "No pair of parts was this close: every merge goes to a judge" : $"At or above it, a pair of parts was of one group {Percent(c.MergePrecision)} of the time")} |");
         text.AppendLine(culture, $"| `MergeCheckSimilarity` | {c.MergeCheckSimilarity:0.00#} | {Percent(c.MergeCheckRecall)} of the groups cut in two had their parts among each other's ten nearest and at least this close |");
         text.AppendLine();
         text.AppendLine("By preference (pair it with the judge's `ClusteringPreference`; the check thresholds stay the same):");

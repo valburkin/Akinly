@@ -23,7 +23,7 @@ A policy decides merges only. Joins, refusals and the zones work as before.
 
 ## A policy as a function
 
-`DelegateMergePolicy` wraps a function. Here cluster 1 holds two tickets and cluster 2 one; their centroids are 0.87 similar, at or above the merge threshold of 0.85. Without a policy, cluster 2 would merge into the larger cluster 1. Cluster 2 has a published page, so the policy lets it keep its id:
+`DelegateMergePolicy` wraps a function. Here cluster 1 holds two tickets and cluster 2 one; their members are 0.87 similar on average, at or above the merge threshold of 0.85. Without a policy, cluster 2 would merge into the larger cluster 1. Cluster 2 has a published page, so the policy lets it keep its id:
 
 ```csharp
 using Akinly;

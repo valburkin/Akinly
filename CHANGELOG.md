@@ -4,6 +4,34 @@ All notable changes to Akinly are listed here. The format follows [Keep a Change
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-11-17
+
+**Upgrading from 1.0.** The API is compatible, but clustering changes without a change to your code: merge thresholds are read as the average similarity of the clusters' members, refused pairs go to a judge, an item takes at most three refusals, and a merge question is put to a chat model as two join requests. Merge thresholds you set for 1.0 were measured on centroids. To keep 1.0's behavior, set `MergeLinkage = Centroid`, `MergeSimilarity = 0.96`, `MergeCheckSimilarity = 0.48`, `MergeRefusals = Block`, `MaxChecksPerItem = 5` and `ChatClientJudgeOptions.MergeMembersEachWay = 0`. `MergeQuestion.Similarity` is measured as `MergeLinkage` says, so a judge of your own that reads it sees average similarities. A host that builds prompts with `JudgePrompts.BuildAsync` still asks a merge as one group-against-group question; `BuildRequestsAsync` builds what `ChatClientJudge` now sends.
+
+### Added
+
+- `ThresholdCalibrator.CalibrateAsync` finds where the ask zones should start for your data, from your judge's own answers: it clusters a sample in a throwaway store with wide ask zones, counts how often the judge says yes in each band of similarity (`ThresholdCalibration.JoinBands` and `MergeBands`), and suggests `CheckSimilarity` and `MergeCheckSimilarity` where the yes-rate rises to a target (`CalibrationOptions.JoinYesRate`, `MergeYesRate`). `ThresholdCalibration.ApplyTo` copies options with the suggested floors. It is an explicit step: thresholds still never shift while a clusterer runs.
+- `ClusteringOptions.MergeLinkage` (`ClusterLinkage`): how the similarity of two clusters is measured for merging. `Average` (the default) is the average similarity of a member of one to a member of the other; `Centroid` is the similarity of their centroids, as in 1.0. A centroid averages away what sets a cluster's members apart, so on texts written to one template two mixed clusters look alike by their centroids though their members do not: on a realistic set, two clusters of 50 unrelated statements scored 0.98 by their centroids, above the merge threshold, and 0.47 on average. Merges then snowballed into a few catch-all clusters.
+- `ChatClientJudgeOptions.MergeMembersEachWay` (default 1): a merge question goes to the model as yes-or-no join questions, whether each cluster's most central member belongs in the other, and the clusters merge only if every answer is yes. A model places one text in a group far more reliably than it compares two groups. 0 asks the 1.0 question, the two groups as a whole.
+- `JudgePrompts.BuildRequestsAsync`, `JudgePrompts.ReadVerdict` and `JudgePrompts.ReadAnswer`, for hosts that send the requests themselves (a provider's batch API, a queue): every request a question needs, the way `ChatClientJudge` asks it, in a fixed order; the verdict from their answers in any order, given how many requests there were, so a host may send them all at once and a request that never came back is never taken for a yes; and each answer on its own, so a host may send them one after another and stop at the first no, as `ChatClientJudge` does.
+- `ClusteringOptions.MergeRefusals` (`RefusalRule`): how a refusal bears on merging two clusters. `Ask` (the default) leaves the pair to a judge and never merges it on similarity alone; `Block` never merges it, as 1.0 did; `Ignore` merges it like any other pair.
+- `akinly-eval` (not shipped): `prepare-complaints` writes a realistic set of one-sentence need statements on one template from public CFPB complaint narratives (dataset `complaints`); `experiment` reports coverage, near-duplicate clusters and why they stayed apart, the judge's yes-rate by similarity, and, with `--referee`, whether each cluster's title fits a sample of its members, by how they were placed; `--calibrate-floors` sets the floors with `ThresholdCalibrator`; `--merge-linkage` and `--merge-members` choose how merges are measured and asked. `calibrate` measures merges with the average linkage.
+
+### Changed
+
+- New defaults: `MaxChecksPerItem` 3 (was 5; with three choices, one question per item), `MergeSimilarity` 0.72 and `MergeCheckSimilarity` 0.55 on the average linkage (were 0.96 and 0.48 on centroids), and merges asked by members; `JoinSimilarity` (0.83) and `CheckSimilarity` (0.30) are unchanged. Measured on 1,500-item development samples with OpenAI `text-embedding-3-small` and a local judge (gemma4:12b), one run each in one order:
+  - On a realistic set of need statements written from public complaints, graded by another local model (gemma4:26b) on whether each item fits its cluster's title, 90% of items fit with the new defaults and 77% with 1.0's. Items moved by a merge fit 79% of the time, against 49%. 79% of items are in clusters of three or more, against 88%.
+  - Adjusted Rand index on Banking77 0.533 (1.0: 0.377) and CLINC150 0.742 (0.725), but MASSIVE 0.276 (0.337): with fewer merges, MASSIVE's many loosely worded requests stay in more, smaller clusters.
+  - On texts written to one template, such as statements extracted from longer texts, a judge rarely says yes at low similarity (on the complaints set, to 2 of 77 join questions below 0.60): raise `CheckSimilarity` for such data, to where `ThresholdCalibrator` puts it (about 0.60 on such data with `text-embedding-3-small`).
+
+  Merge thresholds you set yourself were measured on centroids: recalibrate them, or set `MergeLinkage = Centroid` to keep them. The average linkage reads clusters' sums (`StoredCluster.Sum` and `Count`), not their centroids: a store or a test that sets a cluster's centroid without its sum no longer changes how it merges.
+- Recalibrated example thresholds for the average linkage and three choices per question: `qwen3-embedding:8b` 0.96 / 0.57 / 1.00 / 0.75 (no merge was safe without a judge) and `bge-m3` 0.96 / 0.54 / 0.88 / 0.75 (join / check / merge / merge check), in the guides and package READMEs.
+- A refusal no longer keeps two clusters apart for good. In 1.0, a "none" to a join question with choices counted as a refusal by every cluster offered, and any refusal between two clusters blocked their merge, so on texts written to one template near-identical clusters were never even asked about (on 3,000 statements of the complaints set, 86 of 127 pairs of clusters with centroids at 0.88 or more). With `MergeRefusals = Ask`, a judge decides.
+
+### Deprecated
+
+- `ClusteringOptions.MergeRespectsRefusals`: use `MergeRefusals`. Setting it still works: `true` is `RefusalRule.Block`, `false` is `RefusalRule.Ignore`.
+
 ## [1.0.2] - 2026-11-15
 
 ### Fixed
@@ -50,7 +78,8 @@ All notable changes to Akinly are listed here. The format follows [Keep a Change
 - Documentation: a README with a quick start for each setup, guides in `docs/` (getting started, concepts, configuration, troubleshooting, FAQ, and how-to guides for Ollama, OpenAI, Azure OpenAI and Anthropic, cosine-only clustering, answering questions yourself or through a batch API, merge policies, Qdrant, PostgreSQL with pgvector, labels, removals, calibration, dependency injection, OpenTelemetry, and saving the in-memory store), and a README for each package. The examples that need only the core package run as tests (`ReadmeExampleTests`, `DocsExampleTests`).
 - Benchmarks (`benchmarks/Akinly.Benchmarks`, BenchmarkDotNet) of nearest-cluster search, adding items and maintenance, by store size, on data where items join and clusters merge.
 
-[Unreleased]: https://github.com/valburkin/Akinly/compare/v1.0.2...HEAD
+[Unreleased]: https://github.com/valburkin/Akinly/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/valburkin/Akinly/compare/v1.0.2...v1.1.0
 [1.0.2]: https://github.com/valburkin/Akinly/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/valburkin/Akinly/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/valburkin/Akinly/releases/tag/v1.0.0

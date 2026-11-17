@@ -82,6 +82,63 @@ public sealed class JudgePromptsTests
         Assert.NotNull(await JudgePrompts.BuildAsync(merge with { OtherClusterLabel = "B" }, texts));
     }
 
+    [Fact]
+    public async Task A_merge_is_put_as_one_join_request_per_member_each_way()
+    {
+        var texts = new InMemoryItemTextStore();
+        foreach (var id in new[] { "a1", "a2", "b1", "b2" })
+        {
+            texts.Set(id, "text " + id);
+        }
+
+        var merge = new MergeQuestion(new QuestionId(1), 1, 2, 0.6, "A", "B", ["a1", "a2"], ["b1", "b2"]);
+
+        var one = await JudgePrompts.BuildRequestsAsync(merge, texts);
+        var two = await JudgePrompts.BuildRequestsAsync(merge, texts, new ChatClientJudgeOptions { MergeMembersEachWay = 2 });
+        var whole = await JudgePrompts.BuildRequestsAsync(merge, texts, new ChatClientJudgeOptions { MergeMembersEachWay = 0 });
+
+        Assert.Equal(["text a1", "text b1"], one!.Select(m => Data(m).GetProperty("new_text").GetString()));
+        Assert.Equal("B", Data(one![0]).GetProperty("group_label").GetString());
+        Assert.Equal(["text b1", "text b2"], Data(one[0]).GetProperty("group_members").EnumerateArray().Select(e => e.GetString()));
+        Assert.Equal(["text a1", "text a2", "text b1", "text b2"], two!.Select(m => Data(m).GetProperty("new_text").GetString()));
+        Assert.True(Data(Assert.Single(whole!)).TryGetProperty("first_group", out _));
+
+        // A member whose text is gone gives way to the next.
+        var fallback = await JudgePrompts.BuildRequestsAsync(merge with { ExampleItemIds = ["gone", "a2"] }, texts);
+        Assert.Equal(["text a2", "text b1"], fallback!.Select(m => Data(m).GetProperty("new_text").GetString()));
+        Assert.Null(await JudgePrompts.BuildRequestsAsync(merge with { OtherExampleItemIds = ["gone"] }, texts));
+        Assert.Single((await JudgePrompts.BuildRequestsAsync(new JoinQuestion(new QuestionId(2), "a1", 2, 0.7, null, ["b1"]), texts))!);
+        Assert.Null(await JudgePrompts.BuildRequestsAsync(new JoinQuestion(new QuestionId(2), "gone", 2, 0.7, null, ["b1"]), texts));
+    }
+
+    [Fact]
+    public void A_merge_verdict_does_not_depend_on_the_order_of_the_answers()
+    {
+        var merge = new MergeQuestion(new QuestionId(1), 1, 2, 0.6, null, null, ["a"], ["b"]);
+        const string Yes = """{"same": true}""";
+        const string No = """{"same": false}""";
+
+        Assert.Equal(VerdictKind.Same, JudgePrompts.ReadVerdict(merge, 2, [Yes, Yes]).Kind);
+        Assert.Equal(VerdictKind.Different, JudgePrompts.ReadVerdict(merge, 2, [Yes, No]).Kind);
+        Assert.Equal(VerdictKind.Different, JudgePrompts.ReadVerdict(merge, 2, [No, Yes]).Kind);
+        Assert.Equal(VerdictKind.Different, JudgePrompts.ReadVerdict(merge, 2, [null, No]).Kind);
+        Assert.Equal(VerdictKind.Different, JudgePrompts.ReadVerdict(merge, 2, [No, "?"]).Kind);
+        Assert.Equal(VerdictKind.Different, JudgePrompts.ReadVerdict(merge, 2, [No]).Kind);
+        Assert.Equal(VerdictKind.Failed, JudgePrompts.ReadVerdict(merge, 2, [Yes, null]).Kind);
+        Assert.Equal(VerdictKind.Failed, JudgePrompts.ReadVerdict(merge, 2, [Yes]).Kind);   // one never came back: not a yes
+        Assert.Equal(VerdictKind.Failed, JudgePrompts.ReadVerdict(merge, 2, []).Kind);
+        Assert.Equal(VerdictKind.Same, JudgePrompts.ReadVerdict(new JoinQuestion(new QuestionId(2), "a", 2, 0.7, null, ["b"]), 1, [Yes]).Kind);
+        Assert.Equal(VerdictKind.Failed, JudgePrompts.ReadVerdict(new JoinQuestion(new QuestionId(2), "a", 2, 0.7, null, ["b"]), 1, []).Kind);
+        Assert.Equal([true, false, null], new[] { Yes, No, "?" }.Select((answer, index) => JudgePrompts.ReadAnswer(merge, index, answer)));
+        Assert.True(JudgePrompts.ReadAnswer(new JoinQuestion(new QuestionId(2), "a", 2, 0.7, null, ["b"]), 0, Yes));
+        Assert.Throws<ArgumentOutOfRangeException>(() => JudgePrompts.ReadAnswer(merge, -1, Yes));
+        Assert.Throws<ArgumentOutOfRangeException>(() => JudgePrompts.ReadAnswer(new JoinQuestion(new QuestionId(2), "a", 2, 0.7, null, ["b"]), 1, Yes));
+        Assert.Throws<ArgumentException>(() => JudgePrompts.ReadAnswer(new JoinQuestion(new QuestionId(2), "a", 2, 0.7, null, ["b"]) { OtherChoices = [new JoinChoice(3, 0.6, null, ["c"])] }, 0, Yes));
+        Assert.Throws<ArgumentOutOfRangeException>(() => JudgePrompts.ReadVerdict(merge, 0, []));
+        Assert.Throws<ArgumentException>(() => JudgePrompts.ReadVerdict(merge, 1, [Yes, Yes]));
+        Assert.Throws<ArgumentOutOfRangeException>(() => JudgePrompts.ReadVerdict(new JoinQuestion(new QuestionId(2), "a", 2, 0.7, null, ["b"]), 2, [Yes, Yes]));
+    }
+
     [Theory]
     [InlineData("""{"same": true}""", true)]
     [InlineData("""{"same":false}""", false)]

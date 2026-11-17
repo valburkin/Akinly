@@ -39,9 +39,9 @@ var options = new ClusteringOptions
 {
     EmbeddingModel = "bge-m3",
     JoinSimilarity = 0.96,
-    CheckSimilarity = 0.52,
-    MergeSimilarity = 0.985,
-    MergeCheckSimilarity = 0.66,
+    CheckSimilarity = 0.54,
+    MergeSimilarity = 0.88,
+    MergeCheckSimilarity = 0.75,
 };
 
 var clusterer = new Clusterer(store, options);

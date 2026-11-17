@@ -117,7 +117,7 @@ public abstract class StoreContractTests<TBackend>(TBackend backend) : IClassFix
         options.MaxClustersPerMaintain = 2;
         options.ExamplesPerQuestion = 2;
         options.MergeExamplesPerCluster = 2;
-        options.MergeRespectsRefusals = false;
+        options.MergeRefusals = RefusalRule.Ignore;
         var clusterer = new Clusterer(store, options);
         var log = new List<string>();
 

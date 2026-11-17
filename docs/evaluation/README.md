@@ -1,6 +1,6 @@
 # Evaluation
 
-How Akinly 1.0 clusters five public labeled datasets, against simple baselines run on the same embeddings and against published results, and how to rerun it.
+How Akinly 1.0 clusters five public labeled datasets, against simple baselines run on the same embeddings and against published results, and how to rerun it. Akinly 1.1 changed how clusters merge and the defaults; these results were not rerun with it. What 1.1 was measured on is in [Akinly 1.1 on development samples](#akinly-11-on-development-samples).
 
 Akinly works incrementally: texts arrive one at a time and are placed in one pass. Nobody tells it how many groups there are, and it never sees the labels. Every number here was measured that way.
 
@@ -165,9 +165,39 @@ Compared in its own setting, Akinly is level with LLM-MemCluster on MASSIVE (clo
 - **Expect more clusters than groups.** Akinly leans toward precision: it would rather leave two clusters of one group apart than mix two groups. On MASSIVE, recall stays low (0.28–0.32). `ClusteringPreference.Recall` with its thresholds trades some precision for fewer clusters.
 - **A better judge helps, and costs little.** The cloud setup (OpenAI embeddings, Claude Haiku) beats the local one (`qwen3-embedding:8b`, `gemma4:12b`) on every intent dataset, for about ten cents per thousand texts. The two setups differ in embeddings too, so this compares setups, not judges alone.
 
+## Akinly 1.1 on development samples
+
+1.1 compares clusters by the average similarity of their members instead of their centroids, asks a merge as join questions of each cluster's central member, leaves refused pairs to a judge, and lowers `MaxChecksPerItem` to 3 (see the [changelog](../../CHANGELOG.md)). Its defaults were chosen on development samples, against 1.0's defaults on the same samples:
+
+- 1,500 texts from each training split (never a test split), in one shuffled order, one run each.
+- OpenAI `text-embedding-3-small`, and `gemma4:12b` (Ollama) as the judge.
+- A fourth set, `complaints`: one-sentence need statements on one template ("People struggle to ..."), written by a local model (`qwen3.5:9b`) from narratives of the CFPB's Consumer Complaint Database. The database is a US government work; the narratives are read from a [Hugging Face copy](https://huggingface.co/datasets/BEE-spoke-data/consumer-finance-complaints), whose card lists CC0-1.0, pinned to a commit and checked against its SHA-256. Neither the narratives nor the statements are committed. Its labels (the complaint's product and issue) are too coarse to score clusters by, so another local model (`gemma4:26b-a4b`) grades whether each of 400 sampled items fits its cluster's title, written by `gemma4:12b`.
+
+| Set | Measure | 1.0 defaults | 1.1 defaults |
+|---|---|---|---|
+| Banking77 | ARI | 0.377 | 0.533 |
+| CLINC150 | ARI | 0.725 | 0.742 |
+| MASSIVE | ARI | 0.337 | 0.276 |
+| Complaints | Items that fit their cluster's title | 77% | 90% |
+| Complaints | Items moved by a merge that fit | 49% | 79% |
+| Complaints | Items in clusters of 3 or more | 88% | 79% |
+
+These are single runs on small samples: differences of a few points may be noise. On MASSIVE, 1.1 merges less, so its loosely worded requests stay in more, smaller clusters.
+
+```bash
+# Prepare the complaints set once (a local model writes about 10,000 statements; hours on one GPU)
+dotnet run -c Release --project tools/Akinly.Evaluation -- prepare-complaints --writer ollama:qwen3.5:9b
+
+# 1.1's defaults on a development sample; add the referee for complaints
+dotnet run -c Release --project tools/Akinly.Evaluation -- experiment --dataset complaints --dev 1500   --embedder openai:text-embedding-3-small --judge ollama:gemma4:12b --parallel 4 --thresholds defaults   --referee ollama:gemma4:26b-a4b --labeler ollama:gemma4:12b --fit-sample 400
+
+# 1.0's defaults on the same sample
+#   --set JoinSimilarity=0.83,CheckSimilarity=0.30,MergeSimilarity=0.96,MergeCheckSimilarity=0.48,MaxChecksPerItem=5,MergeRefusals=Block #   --merge-linkage centroid --merge-members 0
+```
+
 ## Rerun it
 
-From the repository root, with `OPENAI_API_KEY` and `ANTHROPIC_API_KEY` set for the cloud setup, or Ollama running for the local one. Each command prints its scores.
+The tables above were measured with Akinly 1.0: to reproduce them exactly, check out the `v1.0.2` tag. From the repository root, with `OPENAI_API_KEY` and `ANTHROPIC_API_KEY` set for the cloud setup, or Ollama running for the local one. Each command prints its scores.
 
 ```bash
 # Intent datasets (banking77, clinc150, massive), whole test split, calibrated on the training split

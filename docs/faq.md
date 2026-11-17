@@ -20,7 +20,7 @@ No; it answers a different question. Batch algorithms such as k-means, agglomera
 
 The core package (`Akinly`) never sees a text: it works on ids and embeddings.
 
-`Akinly.AI` sends texts only to the models you give it: the embedding generator (each text, to embed it) and the chat client (a judge's prompt quotes the item and up to `ExamplesPerQuestion` members of each cluster offered, cut at `MaxTextLength` characters; a labeler's prompt quotes up to `ExamplesPerLabel` members). With a local model, nothing leaves your machine. Texts are kept in the `IItemTextStore` you choose, in memory by default.
+`Akinly.AI` sends texts only to the models you give it: the embedding generator (each text, to embed it) and the chat client (a judge's prompt quotes the item and up to `ExamplesPerQuestion` members of each cluster offered, or, for a merge, a member of one cluster and up to `MergeExamplesPerCluster` members of the other, cut at `MaxTextLength` characters; a labeler's prompt quotes up to `ExamplesPerLabel` members). With a local model, nothing leaves your machine. Texts are kept in the `IItemTextStore` you choose, in memory by default.
 
 No exception, log entry, trace or metric that Akinly writes carries an item's text. The stores keep ids, embeddings and labels. Two cautions: much of a text can be recovered from its embedding, so protect the store like the texts; and a label is written from members' texts, so review labels before showing them publicly.
 
@@ -34,8 +34,8 @@ The judge needs a chat model that follows a short instruction and answers with a
 
 Only items in the ask zone cost anything, and each is bounded:
 
-- **Joins.** A join question offers up to `JoinChoices` (3) of the item's nearest clusters, and the judge picks one or none. A "none" counts as a refusal by each cluster offered, and an item stops asking after `MaxChecksPerItem` (5) refusals: a question never offers more clusters than the item has checks left, so with the defaults an item asks twice (three clusters, then two) when it has that many neighbors, and at most five times when each question offers one. A failed answer is asked again, up to `FailedAnswers.MaxAttempts` (3) times per question.
-- **Merges.** At most one question per pair of clusters in the merge-check zone, asked when one of them has changed; a pair answered once is not asked again.
+- **Joins.** A join question offers up to `JoinChoices` (3) of the item's nearest clusters, and the judge picks one or none. A "none" counts as a refusal by each cluster offered, and an item stops asking after `MaxChecksPerItem` (3) refusals: a question never offers more clusters than the item has checks left, so with the defaults an item asks once (three clusters) when it has that many neighbors, and at most three times when each question offers one. A failed answer is asked again, up to `FailedAnswers.MaxAttempts` (3) times per question.
+- **Merges.** At most one question per pair of clusters in the merge-check zone, asked when one of them has changed; a pair answered once is not asked again. `ChatClientJudge` puts a merge question to the model as two requests at most, one member of each cluster asked about the other, and stops at the first no.
 - **Items in the join or new zone** cost no question at all.
 
 How many items fall in the ask zone depends on your data, the embedding model and the thresholds. The default ask zone is wide, since the judge decides the close calls; to ask less, raise `CheckSimilarity` or lower `MaxChecksPerItem`. The [evaluation results](evaluation/README.md) report the judge's input tokens and cost per 1,000 texts on public datasets, and the `akinly.questions.asked` and `akinly.items.placed` counters ([telemetry](how-to/opentelemetry.md)) show yours.

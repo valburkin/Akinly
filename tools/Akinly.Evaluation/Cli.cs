@@ -7,16 +7,21 @@ namespace Akinly.Evaluation;
 public static class Cli
 {
     public const string Usage = """
-        akinly-eval calibrate --dataset banking77|clinc150|massive|intents|news-t|tweets-t|file.jsonl [--embedder ollama:bge-m3] [--sample 3000]
-                              [--loss 0.01] [--max-checks 5] [--seed 1] [--cache .eval-cache] [--out docs/evaluation]
-        akinly-eval evaluate  --dataset banking77|clinc150|massive|intents|news-t|tweets-t|file.jsonl [--embedder ollama:bge-m3] [--judge ollama:qwen3.5:9b,anthropic:claude-haiku-5-5]
+        akinly-eval calibrate --dataset banking77|clinc150|massive|intents|news-t|tweets-t|complaints|file.jsonl [--embedder ollama:bge-m3] [--sample 3000]
+                              [--loss 0.01] [--max-checks 3] [--seed 1] [--cache .eval-cache] [--out docs/evaluation]
+        akinly-eval evaluate  --dataset banking77|clinc150|massive|intents|news-t|tweets-t|complaints|file.jsonl [--embedder ollama:bge-m3] [--judge ollama:qwen3.5:9b,anthropic:claude-haiku-5-5]
                               [--sample 0] [--calibration-sample 3000] [--orders 3] [--judged-orders 3]
                               [--join J --check C --merge M --merge-check MC] [--batch 50] [--parallel 4]
                               [--seed 1] [--cache .eval-cache] [--out docs/evaluation]
         akinly-eval experiment --dataset ... [--split train|test] [--dev 3000|0] [--judge oracle|none|provider:model]
                               [--calibrate-on dataset] [--order shuffle|file] [--prefer balanced|precision|recall]
-                              [--thresholds calibrated|defaults] [--set Option=value,...] [--probe N] [--dump file]
+                              [--thresholds calibrated|defaults] [--merge-linkage average|centroid] [--set Option=value,...]
+                              [--probe N] [--dump file]
+                              [--referee provider:model [--labeler provider:model] [--fit-sample 300]] [--calibrate-floors 1500] [--merge-members 1]
                               Development runs: by default on a sample of the training split, never the test split.
+        akinly-eval prepare-complaints [--writer ollama:qwen3.5:9b] [--count 8000] [--parallel 4] [--seed 1] [--cache .eval-cache]
+                              Writes the realistic set (dataset "complaints"): need statements on one template, written
+                              by a local model from public CFPB complaint narratives.
 
         Models are provider:model: ollama (a local Ollama at OLLAMA_HOST), openai (OPENAI_API_KEY) or
         anthropic (ANTHROPIC_API_KEY, judges only). Several judges, separated by commas, give a row each.
@@ -48,9 +53,13 @@ public static class Cli
                 return 0;
             case "experiment":
                 arguments.Allow("dataset", "embedder", "judge", "seed", "cache", "batch", "parallel", "split", "dev", "order", "calibrate-on",
-                    "loss", "calibrate-checks", "prefer", "thresholds", "set", "probe", "dump", "criterion", "join-prompt", "choice-prompt",
-                    "merge-prompt", "think", "sweep-step");
+                    "loss", "calibrate-checks", "merge-linkage", "prefer", "thresholds", "set", "probe", "dump", "criterion", "join-prompt", "choice-prompt",
+                    "merge-prompt", "think", "sweep-step", "referee", "labeler", "fit-sample", "calibrate-floors", "merge-members");
                 await Experiment.RunAsync(arguments, cancellationToken).ConfigureAwait(false);
+                return 0;
+            case "prepare-complaints":
+                arguments.Allow("writer", "count", "parallel", "seed", "cache");
+                await Complaints.PrepareAsync(arguments, cancellationToken).ConfigureAwait(false);
                 return 0;
             default:
                 throw new ArgumentException($"Unknown command '{arguments.Command}'. Run without arguments for the usage.");
@@ -252,7 +261,7 @@ public static class Cli
         var dataset = arguments.Get("dataset", "banking77");
         if (!Dataset.IsPublic(dataset) && !File.Exists(dataset))
         {
-            throw new ArgumentException($"'{dataset}' is neither a public dataset (banking77, clinc150, massive, intents, news-t, tweets-t) nor an existing JSON-lines file.");
+            throw new ArgumentException($"'{dataset}' is neither a public dataset (banking77, clinc150, massive, intents, news-t, tweets-t, complaints) nor an existing JSON-lines file.");
         }
 
         var embedder = arguments.Get("embedder", "ollama:bge-m3");

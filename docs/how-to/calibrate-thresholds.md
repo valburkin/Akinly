@@ -1,20 +1,23 @@
 # Calibrate thresholds for your embedding model
 
-Akinly's four thresholds are cosine similarities, and every embedding model spreads similarities differently: two texts that one model puts at 0.80 another may put at 0.65. The defaults (join 0.83, check 0.30, merge 0.96, merge check 0.48) were calibrated with this tool for OpenAI's `text-embedding-3-small` at its default dimensions, on 6,000 texts pooled from the training splits of Banking77, CLINC150 and MASSIVE (287 groups). With any other model, calibrate them before you trust the clusters.
+Akinly's four thresholds are cosine similarities, and every embedding model spreads similarities differently: two texts that one model puts at 0.80 another may put at 0.65. The defaults (join 0.83, check 0.30, merge 0.72, merge check 0.55) are for OpenAI's `text-embedding-3-small` at its default dimensions. With any other model, calibrate them before you trust the clusters. The merge thresholds apply to the average similarity of two clusters' members (`MergeLinkage = Average`), not their centroids.
 
-The ask zones the defaults leave (0.30 to 0.83 for joins, 0.48 to 0.96 for merges) are wide on purpose: the judge, not similarity, decides the close calls, and `MaxChecksPerItem` bounds the questions per item. Only joins and merges without a question have to be nearly always right, so the join and merge thresholds are high, and the check thresholds low enough that the judge sees almost every item it could place.
+The thresholds come from two kinds of evidence:
 
-`akinly-eval calibrate` suggests all four from labeled texts, by replaying them the way the clusterer sees them. The tool lives in the repository (`tools/Akinly.Evaluation`) and is not shipped as a package; run it from a clone.
+- **Joins and merges without a question** have to be nearly always right. `akinly-eval calibrate` suggests `JoinSimilarity` and `MergeSimilarity` from labeled texts, by replaying them the way the clusterer sees them. The defaults were calibrated this way on 6,000 texts pooled from the training splits of Banking77, CLINC150 and MASSIVE (287 groups). The tool lives in the repository (`tools/Akinly.Evaluation`) and is not shipped as a package; run it from a clone.
+- **Where the ask zones start** (`CheckSimilarity`, `MergeCheckSimilarity`) depends on your data and your judge as much as on the model: below some similarity, the judge's yeses are too rare, or too often wrong, to be worth the questions. The defaults were set by measuring whole runs, with a judge, on intent benchmarks and a realistic set of complaints (see the [CHANGELOG](../../CHANGELOG.md)). For your data, [set the floors from your judge](#5-set-the-floors-from-your-judge).
 
 ## Calibrated values
 
-These were calibrated the same way as the defaults (`calibrate --dataset intents --sample 6000`, balanced). They suit short requests and complaints in English; for other kinds of text, calibrate on your own.
+`JoinSimilarity`, `CheckSimilarity` and `MergeSimilarity` come from `calibrate --dataset intents --sample 6000` (balanced), for the defaults too. The default `MergeCheckSimilarity` was set by measuring whole runs with a judge (see [Akinly 1.1 on development samples](../evaluation/README.md#akinly-11-on-development-samples)); for the other models it is set at the same point of the calibration, as below. They suit short requests and complaints in English; for other kinds of text, calibrate on your own.
 
 | Embedding model | `JoinSimilarity` | `CheckSimilarity` | `MergeSimilarity` | `MergeCheckSimilarity` |
 |---|---|---|---|---|
-| OpenAI `text-embedding-3-small` (the defaults) | 0.83 | 0.30 | 0.96 | 0.48 |
-| `qwen3-embedding:8b` (Ollama) | 0.96 | 0.55 | 0.97 | 0.71 |
-| `bge-m3` (Ollama) | 0.96 | 0.52 | 0.985 | 0.66 |
+| OpenAI `text-embedding-3-small` (the defaults) | 0.83 | 0.30 | 0.72 | 0.55 |
+| `qwen3-embedding:8b` (Ollama) | 0.96 | 0.57 | 1.00 (see below) | 0.75 |
+| `bge-m3` (Ollama) | 0.96 | 0.54 | 0.88 | 0.75 |
+
+The merge thresholds are average member similarities (the default `MergeLinkage`). For `qwen3-embedding:8b`, no similarity was right 95% of the time for merges, so a judge decides every merge. Each `MergeCheckSimilarity` is set where a quarter to a third of the pairs of clusters were of one group, as for the defaults.
 
 ## 1. Prepare labeled texts
 
@@ -101,7 +104,7 @@ Then two tables, by similarity band of 0.05: how often an item's nearest cluster
 How the values are chosen:
 
 - **Joins.** The items arrive one at a time, in a random order, into clusters built from the labels (what a perfect clusterer would build). Each is compared with every cluster so far before it joins its own, so it meets clusters of every size, and sometimes its group has no cluster yet, as early in a stream. `JoinSimilarity` is the lowest similarity at which the nearest cluster is the item's own at least 95% of the time. The rate is fitted as rising with similarity, so a band of mostly wrong candidates is not hidden by the many easy ones above it.
-- **Checks.** A judge is asked about an item's nearest clusters only, up to `MaxChecksPerItem` (5, its default) of them. `CheckSimilarity` keeps all but 1% of the items a judge could help (their own cluster among those five nearest) within the ask zone.
+- **Checks.** A judge is asked about an item's nearest clusters only, up to `MaxChecksPerItem` (3, its default) of them. `CheckSimilarity` keeps all but 1% of the items a judge could help (their own cluster among those nearest) within the ask zone.
 - **Merges.** Each group is cut in two, a fragment of one to five items and the rest, and every pair of parts is compared. A fragment is what the clusterer leaves apart in practice: a few items that came early or were refused, rarely half a group. `MergeSimilarity` is the lowest similarity at which a pair is of one group 95% of the time; `MergeCheckSimilarity` keeps all but 1% of the true pairs that are among each other's ten nearest within reach.
 - Join and merge thresholds are rounded up, check thresholds down, to two decimals (three when all candidates are closer than two can tell apart).
 
@@ -144,7 +147,33 @@ For another preference, read the four from `suggested.GetProperty("Precision")` 
 
 Or in `appsettings.json`, under `Akinly` (see [Binding from configuration](../configuration.md#binding-from-configuration)). For cosine-only clustering, use the suggested `JoinSimilarity` and `MergeSimilarity` in `ClusteringOptions.CosineOnly(model, join, merge)`.
 
-## 5. Check the result
+## 5. Set the floors from your judge
+
+The calibration above fits the join and merge thresholds to your embedding model. Where the ask zones should start also depends on your data and your judge. On short requests, texts with the same intent are often only 0.3 to 0.5 alike, and a judge rightly says yes there. On texts written to one template, such as need statements extracted from longer texts, everything is 0.45 to 0.6 alike, and a judge rarely says yes below 0.6. No single floor suits both.
+
+`ThresholdCalibrator` (in the core package) measures this with your own judge. It clusters a sample of your items in a throwaway in-memory store, with the ask zones opened wide (`CalibrationOptions.LowestCheckSimilarity`, 0.30, and `LowestMergeCheckSimilarity`, 0.30). It counts how often the judge says yes in each band of similarity (0.02 wide): each item's first join question, and every merge question. Then it suggests each floor where the yes-rate rises to a target (`JoinYesRate`, default 0.30, and `MergeYesRate`, default 0.08). The rate is fitted as rising with similarity, so a stray yes in a low band does not drag a floor down.
+
+```csharp
+var calibration = await ThresholdCalibrator.CalibrateAsync(sample, judge, options);
+
+foreach (var band in calibration.JoinBands)
+{
+    Console.WriteLine($"{band.From:0.00}-{band.To:0.00}: {band.Yes} of {band.Questions} yes ({band.YesRate:P0})");
+}
+
+foreach (var warning in calibration.Warnings)
+{
+    Console.WriteLine(warning);   // too few questions, or a target never reached
+}
+
+options = calibration.ApplyTo(options);   // a copy with CheckSimilarity and MergeCheckSimilarity set
+```
+
+Here `sample` is a list of your `ClusterItem`s (1,000 to 2,000 typical items is plenty; 200 join questions and 100 merge questions are the least it trusts), `judge` the `IClusterJudge` you cluster with (a `ChatClientJudge` with your criterion, say), and `options` your `ClusteringOptions`. It costs about one question per item, plus merge questions, once. It never runs while you cluster: thresholds never shift at run time. Run it again when your data or judge changes.
+
+Read the band tables before you apply the floors: they show where your judge starts to find matches, and how many questions each band would cost. A lower `JoinYesRate` (0.15 to 0.20, say) asks more and finds more; a higher one asks less, for precision. If you send questions through your own queue or batch API rather than an `IClusterJudge`, either wrap your path in one for this one-off run, or count the yeses per band from your own logs and set `CheckSimilarity` and `MergeCheckSimilarity` by the same rule.
+
+## 6. Check the result
 
 Numbers on pairs are not the goal; clusters a reader trusts are. Cluster a sample of real data, then read whole clusters: does the label, or the first member, honestly describe every member? Too many mixed clusters: raise the join (and merge) threshold. Too many clusters of one: lower them, or lower the check thresholds so the judge sees more.
 

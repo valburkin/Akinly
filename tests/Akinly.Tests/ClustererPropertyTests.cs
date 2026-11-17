@@ -23,12 +23,12 @@ public sealed class ClustererPropertyTests
             _ => 3,
         }, a, b)).Array[1, 50];
 
-    private static ClusteringOptions Options(bool respectRefusals) => Judged(o =>
+    private static ClusteringOptions Options(RefusalRule refusals) => Judged(o =>
     {
         o.MaxOpenQuestions = 3;
         o.MaxChecksPerItem = 2;
         o.FailedAnswers.MaxAttempts = 2;
-        o.MergeRespectsRefusals = respectRefusals;
+        o.MergeRefusals = refusals;
         o.CandidateClusters = 4;
     });
 
@@ -38,7 +38,7 @@ public sealed class ClustererPropertyTests
         await Ops.SampleAsync(async ops =>
         {
             var store = new InMemoryClusterStore();
-            var clusterer = new Clusterer(store, Options(respectRefusals: true));
+            var clusterer = new Clusterer(store, Options(RefusalRule.Block));
             await RunAsync(clusterer, ops, live => CheckInvariantsAsync(store, live));
         }, iter: 250);
     }
@@ -57,7 +57,7 @@ public sealed class ClustererPropertyTests
     private static async Task<string> ExportAfterAsync(Op[] ops)
     {
         var store = new InMemoryClusterStore();
-        await RunAsync(new Clusterer(store, Options(respectRefusals: false)), ops, _ => Task.CompletedTask);
+        await RunAsync(new Clusterer(store, Options(RefusalRule.Ask)), ops, _ => Task.CompletedTask);
         using var stream = new MemoryStream();
         await store.ExportAsync(stream);
         return Encoding.UTF8.GetString(stream.ToArray());
@@ -136,7 +136,7 @@ public sealed class ClustererPropertyTests
                     Assert.Null(item.OpenQuestionId);
                     Assert.DoesNotContain(item.Id, waiting);
 
-                    // A merge never carries an item into a cluster that refused it.
+                    // A merge never carries an item into a cluster that refused it (RefusalRule.Block).
                     foreach (var refused in item.RefusedClusterIds)
                     {
                         Assert.NotEqual(Resolve(clusters, refused), item.ClusterId.Value);

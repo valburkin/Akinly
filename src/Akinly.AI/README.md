@@ -37,9 +37,9 @@ var options = new ClusteringOptions
 {
     EmbeddingModel = "qwen3-embedding:8b",
     JoinSimilarity = 0.96,
-    CheckSimilarity = 0.55,
-    MergeSimilarity = 0.97,
-    MergeCheckSimilarity = 0.71,
+    CheckSimilarity = 0.57,
+    MergeSimilarity = 1.0,   // no similarity was safe without a judge
+    MergeCheckSimilarity = 0.75,
 };
 
 // A short answer needs no reasoning: with thinking off, the model answers much faster.

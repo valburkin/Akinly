@@ -103,5 +103,26 @@ public sealed class SmallTypesTests
 
         Assert.Contains("FailedAnswers is required.", new ClusteringOptions { EmbeddingModel = "m", FailedAnswers = null! }.Validate());
         Assert.Contains("Split is required.", new ClusteringOptions { EmbeddingModel = "m", Split = null! }.Validate());
+        Assert.Contains("MergeRefusals must be Ask, Block or Ignore.", new ClusteringOptions { EmbeddingModel = "m", MergeRefusals = (RefusalRule)7 }.Validate());
+        Assert.Contains("MergeLinkage must be Centroid or Average.", new ClusteringOptions { EmbeddingModel = "m", MergeLinkage = (ClusterLinkage)7 }.Validate());
+    }
+
+    [Fact]
+    public void The_old_refusal_switch_maps_onto_the_refusal_rule()
+    {
+        var options = new ClusteringOptions();
+        Assert.Equal(RefusalRule.Ask, options.MergeRefusals);
+#pragma warning disable CS0618 // The obsolete switch is what this test checks.
+        Assert.False(options.MergeRespectsRefusals);
+        options.MergeRespectsRefusals = true;
+        Assert.Equal(RefusalRule.Block, options.MergeRefusals);
+        Assert.True(options.MergeRespectsRefusals);
+        options.MergeRespectsRefusals = false;
+#pragma warning restore CS0618
+        Assert.Equal(RefusalRule.Ignore, options.MergeRefusals);
+        Assert.Equal(RefusalRule.Ignore, options.Clone().MergeRefusals);
+        Assert.Equal(ClusterLinkage.Average, options.MergeLinkage);
+        options.MergeLinkage = ClusterLinkage.Centroid;
+        Assert.Equal(ClusterLinkage.Centroid, options.Clone().MergeLinkage);
     }
 }

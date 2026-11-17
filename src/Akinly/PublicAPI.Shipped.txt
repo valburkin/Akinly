@@ -641,3 +641,57 @@ virtual Akinly.Question.PrintMembers(System.Text.StringBuilder! builder) -> bool
 ~override Akinly.Storage.ClusterNeighbor.ToString() -> string
 ~override Akinly.Verdict.Equals(object obj) -> bool
 ~override Akinly.Verdict.ToString() -> string
+Akinly.ClusteringOptions.MergeRefusals.get -> Akinly.RefusalRule
+Akinly.ClusteringOptions.MergeRefusals.set -> void
+Akinly.RefusalRule
+Akinly.RefusalRule.Ask = 0 -> Akinly.RefusalRule
+Akinly.RefusalRule.Block = 1 -> Akinly.RefusalRule
+Akinly.RefusalRule.Ignore = 2 -> Akinly.RefusalRule
+Akinly.CalibrationOptions
+Akinly.CalibrationOptions.BandWidth.get -> double
+Akinly.CalibrationOptions.BandWidth.set -> void
+Akinly.CalibrationOptions.BatchSize.get -> int
+Akinly.CalibrationOptions.BatchSize.set -> void
+Akinly.CalibrationOptions.CalibrationOptions() -> void
+Akinly.CalibrationOptions.JoinYesRate.get -> double
+Akinly.CalibrationOptions.JoinYesRate.set -> void
+Akinly.CalibrationOptions.LowestCheckSimilarity.get -> double
+Akinly.CalibrationOptions.LowestCheckSimilarity.set -> void
+Akinly.CalibrationOptions.LowestMergeCheckSimilarity.get -> double
+Akinly.CalibrationOptions.LowestMergeCheckSimilarity.set -> void
+Akinly.CalibrationOptions.MergeYesRate.get -> double
+Akinly.CalibrationOptions.MergeYesRate.set -> void
+Akinly.CalibrationOptions.Validate() -> System.Collections.Generic.IReadOnlyList<string!>!
+Akinly.SimilarityBand
+Akinly.SimilarityBand.<Clone>$() -> Akinly.SimilarityBand!
+Akinly.SimilarityBand.Deconstruct(out double From, out double To, out int Questions, out int Yes) -> void
+Akinly.SimilarityBand.Equals(Akinly.SimilarityBand? other) -> bool
+Akinly.SimilarityBand.From.get -> double
+Akinly.SimilarityBand.From.init -> void
+Akinly.SimilarityBand.Questions.get -> int
+Akinly.SimilarityBand.Questions.init -> void
+Akinly.SimilarityBand.SimilarityBand(double From, double To, int Questions, int Yes) -> void
+Akinly.SimilarityBand.To.get -> double
+Akinly.SimilarityBand.To.init -> void
+Akinly.SimilarityBand.Yes.get -> int
+Akinly.SimilarityBand.Yes.init -> void
+Akinly.SimilarityBand.YesRate.get -> double
+Akinly.ThresholdCalibration
+Akinly.ThresholdCalibration.ApplyTo(Akinly.ClusteringOptions! options) -> Akinly.ClusteringOptions!
+Akinly.ThresholdCalibration.CheckSimilarity.get -> double
+Akinly.ThresholdCalibration.JoinBands.get -> System.Collections.Generic.IReadOnlyList<Akinly.SimilarityBand!>!
+Akinly.ThresholdCalibration.MergeBands.get -> System.Collections.Generic.IReadOnlyList<Akinly.SimilarityBand!>!
+Akinly.ThresholdCalibration.MergeCheckSimilarity.get -> double
+Akinly.ThresholdCalibration.Warnings.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Akinly.ThresholdCalibrator
+override Akinly.SimilarityBand.Equals(object? obj) -> bool
+override Akinly.SimilarityBand.GetHashCode() -> int
+override Akinly.SimilarityBand.ToString() -> string!
+static Akinly.SimilarityBand.operator !=(Akinly.SimilarityBand? left, Akinly.SimilarityBand? right) -> bool
+static Akinly.SimilarityBand.operator ==(Akinly.SimilarityBand? left, Akinly.SimilarityBand? right) -> bool
+static Akinly.ThresholdCalibrator.CalibrateAsync(System.Collections.Generic.IEnumerable<Akinly.ClusterItem!>! sample, Akinly.IClusterJudge! judge, Akinly.ClusteringOptions! options, Akinly.CalibrationOptions? calibration = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Akinly.ThresholdCalibration!>!
+Akinly.ClusterLinkage
+Akinly.ClusterLinkage.Average = 1 -> Akinly.ClusterLinkage
+Akinly.ClusterLinkage.Centroid = 0 -> Akinly.ClusterLinkage
+Akinly.ClusteringOptions.MergeLinkage.get -> Akinly.ClusterLinkage
+Akinly.ClusteringOptions.MergeLinkage.set -> void

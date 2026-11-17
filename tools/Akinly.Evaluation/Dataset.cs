@@ -24,7 +24,7 @@ public static class Dataset
     private const string Streams = "https://raw.githubusercontent.com/jackyin12/MStream/ac894075f2bbb93405679e237d2d5d11a325078c/MStream/data/";
 
     /// <summary>Whether a name is one of the public datasets rather than a file.</summary>
-    public static bool IsPublic(string name) => name is "banking77" or "clinc150" or "massive" or "intents" or "news-t" or "tweets-t";
+    public static bool IsPublic(string name) => name is "banking77" or "clinc150" or "massive" or "intents" or "news-t" or "tweets-t" or "complaints";
 
     /// <summary>Whether a public dataset has a training split apart from its test split (News-T and Tweets-T do not).</summary>
     public static bool HasSplit(string name) => name is not ("news-t" or "tweets-t");
@@ -48,6 +48,7 @@ public static class Dataset
         ("massive", "test") => new(Massive + "test/en.json.gz", "6dd692a9c188f395956b0534b70486c8ed959fd6d7e50d26d419ff169d213894", "massive-test-en.json.gz"),
         ("news-t", "train" or "test") => new(Streams + "News-T", "562d6a1771a4675caedb405d68371348bd7e54db130b633ef5ebd5896157ffbb", "news-t.jsonl"),
         ("tweets-t", "train" or "test") => new(Streams + "Tweets-T", "e1b806af9992e881ff75b76efe259dff8b3483d9be11f1110a777356075070cf", "tweets-t.jsonl"),
+        ("complaints", "train" or "test") => Complaints.Source,
         _ => throw new ArgumentException($"'{name}' has no split '{split}'."),
     };
 
@@ -59,6 +60,7 @@ public static class Dataset
         "intents" => "Banking77 (CC BY 4.0), CLINC150 (CC BY 3.0) and MASSIVE (CC BY 4.0), pooled, labels kept apart",
         "news-t" => "News-T, Yin et al. (2018); no license stated, downloaded for evaluation only and never redistributed",
         "tweets-t" => "Tweets-T, Yin et al. (2018); no license stated, downloaded for evaluation only and never redistributed",
+        "complaints" => Complaints.License,
         _ => "your own data",
     };
 
@@ -74,6 +76,15 @@ public static class Dataset
             }
 
             return pooled;
+        }
+
+        if (name == "complaints")
+        {
+            // Prepared by prepare-complaints; odd complaint ids are the training split, even the test split.
+            var path = Complaints.SetPath(cacheDirectory);
+            return File.Exists(path)
+                ? [.. LoadJsonLines(path).Where(t => (long.Parse(t.Id.AsSpan(4), CultureInfo.InvariantCulture) % 2 == 1) == (split == "train"))]
+                : throw new ArgumentException($"{path} does not exist: run prepare-complaints first.");
         }
 
         var source = Source(name, split);
@@ -160,6 +171,21 @@ public static class Dataset
     /// </summary>
     private static async Task<string> DownloadAsync(DatasetSource source, string cacheDirectory, CancellationToken cancellationToken)
     {
+        var path = await EnsureFileAsync(source, cacheDirectory, cancellationToken).ConfigureAwait(false);
+        var cached = await File.ReadAllBytesAsync(path, cancellationToken).ConfigureAwait(false);
+        if (!source.FileName.EndsWith(".gz", StringComparison.Ordinal))
+        {
+            return Encoding.UTF8.GetString(cached);
+        }
+
+        using var compressed = new GZipStream(new MemoryStream(cached), CompressionMode.Decompress);
+        using var reader = new StreamReader(compressed, Encoding.UTF8);
+        return await reader.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>The path of the file in the cache, downloaded into it if missing, checked against its hash either way.</summary>
+    public static async Task<string> EnsureFileAsync(DatasetSource source, string cacheDirectory, CancellationToken cancellationToken)
+    {
         Directory.CreateDirectory(cacheDirectory);
         var path = Path.Combine(cacheDirectory, source.FileName);
         if (!File.Exists(path))
@@ -172,16 +198,16 @@ public static class Dataset
             File.Move(partial, path, overwrite: true);
         }
 
-        var cached = await File.ReadAllBytesAsync(path, cancellationToken).ConfigureAwait(false);
-        Verify(cached, source, path);
-        if (!source.FileName.EndsWith(".gz", StringComparison.Ordinal))
+        await using (var stream = File.OpenRead(path))
         {
-            return Encoding.UTF8.GetString(cached);
+            var hash = Convert.ToHexStringLower(await SHA256.HashDataAsync(stream, cancellationToken).ConfigureAwait(false));
+            if (hash != source.Sha256)
+            {
+                throw new InvalidDataException($"{path} has SHA-256 {hash}, not the pinned {source.Sha256}. Delete it from the cache to download it again.");
+            }
         }
 
-        using var compressed = new GZipStream(new MemoryStream(cached), CompressionMode.Decompress);
-        using var reader = new StreamReader(compressed, Encoding.UTF8);
-        return await reader.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
+        return path;
     }
 
     private static void Verify(byte[] bytes, DatasetSource source, string where)

@@ -34,14 +34,14 @@ The ask zones are wide on purpose: the judge, not similarity, decides the close 
 | `EmbeddingModel` | `""` (required) | Names the model the embeddings come from. The store records it on the first add, and a clusterer configured with another name refuses to work on that store (`EmbeddingModelMismatchException`), since thresholds do not carry over between models | Always set it. Use the same string everywhere for one model; the comparison is exact |
 | `JoinSimilarity` | 0.83 | At or above it, an item joins its nearest cluster without a question | Raise it if unrelated items end up together without being asked about; lower it if near-duplicates go to the judge or start new clusters |
 | `CheckSimilarity` | 0.30 | At or above it, and below `JoinSimilarity`, a judge decides whether the item joins. Must not exceed `JoinSimilarity`; equal to it means no ask zone | Lower it to let the judge see more candidates (more questions); raise it to ask less. Set it to `JoinSimilarity` for cosine-only clustering |
-| `MergeSimilarity` | 0.96 | At or above this similarity of their centroids, two clusters merge without a question | Raise it if clusters about different things merge; lower it if duplicates stay apart |
-| `MergeCheckSimilarity` | 0.48 | At or above it, and below `MergeSimilarity`, a judge decides whether two clusters merge. Must not exceed `MergeSimilarity` | As for `CheckSimilarity`, for merges |
+| `MergeSimilarity` | 0.72 | At or above this similarity of two clusters (see `MergeLinkage`), they merge without a question | Raise it if clusters about different things merge; lower it if duplicates stay apart |
+| `MergeCheckSimilarity` | 0.55 | At or above it, and below `MergeSimilarity`, a judge decides whether two clusters merge. Must not exceed `MergeSimilarity` | As for `CheckSimilarity`, for merges |
 
 ### Limits
 
 | Option | Default | What it does | When to change it |
 |---|---|---|---|
-| `MaxChecksPerItem` | 5 | Refusals an item takes before it stops asking; after that, it joins a cluster only at the join threshold, or starts its own. A "none" to a question with choices counts one refusal for each cluster offered. 0 means join questions are never asked | Raise it when items often belong to a cluster further down their nearest; lower it to ask fewer questions per item |
+| `MaxChecksPerItem` | 3 | Refusals an item takes before it stops asking; after that, it joins a cluster only at the join threshold, or starts its own. A "none" to a question with choices counts one refusal for each cluster offered. 0 means join questions are never asked | Raise it when items often belong to a cluster further down their nearest; lower it to ask fewer questions per item |
 | `MaxOpenQuestions` | 200 | Questions open at once. While it is reached, new items that need a question wait, and merge questions wait for a later `MaintainAsync` | Lower is more accurate (an item placed while its neighbors' answers are out cannot see them); higher lets more questions go out at once, such as in one large batch |
 | `CandidateClusters` | 10 | Nearest clusters fetched when placing an item (the nearest decides; the next ones are offered as choices, and stand in when it is empty or refused the item) and for each cluster in a merge check | Raise it with high `MaxChecksPerItem`, or if merges are missed because the partner is not among the ten nearest. Each search returns more records |
 | `MaxClustersPerMaintain` | 1,000 | Changed clusters one `MaintainAsync` checks. The next call continues after the last one checked, wrapping around | Lower it to bound the time of one call on a large store; raise it to settle a busy store in fewer calls |
@@ -53,7 +53,8 @@ The ask zones are wide on purpose: the judge, not similarity, decides the close 
 
 | Option | Default | What it does | When to change it |
 |---|---|---|---|
-| `MergeRespectsRefusals` | `true` | A merge is skipped when one cluster refused an item that is now in the other, so a merge cannot carry an item into a cluster that said no to it | Turn it off only if refusals came from a judge you no longer trust and you prefer fewer, larger clusters |
+| `MergeRefusals` | `Ask` | When one cluster refused an item that is now in the other: `Ask` leaves the pair to a judge, never merging it on similarity alone; `Block` never merges it; `Ignore` merges it like any other pair. With no merge ask zone, `Ask` works as `Block` | `Block` if a merge must never carry an item into a cluster that refused it, at the cost of duplicate clusters. `MergeRespectsRefusals`, its 1.0 form, still works: `true` is `Block`, `false` is `Ignore` |
+| `MergeLinkage` | `Average` | How two clusters' similarity is measured for `MergeSimilarity` and `MergeCheckSimilarity`: `Average`, the average similarity of a member of one to a member of the other; `Centroid`, the similarity of their centroids, as in 1.0 | `Centroid` only to keep merge thresholds you calibrated with 1.0. On mixed clusters a centroid is misleadingly close to other centroids, so merges snowball |
 
 ### Failed answers
 
@@ -96,7 +97,8 @@ How a `ChatClientJudge` asks its model. Pass them to `new ChatClientJudge(chat, 
 | `Criterion` | "about the same specific problem or request, so that one answer or fix would settle both; sharing a topic is not enough" (`DefaultCriterion`) | What "the same" means for your data. It completes the prompt's sentence "Two texts belong together only when they are ..." | Fit it to your data; it is the strongest control over how fine the clusters are. The default suits complaints, feedback and tickets, where one fix settles both. For requests to an assistant or a service, where two texts ask for the same kind of thing with different details: "asking for the same kind of request: the same action or the same information, whatever the details such as names, dates, places or amounts; sharing a topic is not enough". For news: "about the same news story or event; sharing a broad topic is not enough". Others: "describing the same bug", "requesting the same feature" |
 | `JoinInstructions` | null (uses `JudgePrompts.DefaultJoinInstructions`) | The system prompt for yes-or-no join questions; `{criterion}` is replaced with `Criterion` | Only if changing `Criterion` is not enough. Keep the JSON answer format, or set `UseStructuredOutput` and check that answers still parse |
 | `ChoiceInstructions` | null (uses `JudgePrompts.DefaultChoiceInstructions`) | The system prompt for join questions with choices; the answer is `{"group": n}`, 0 for none. The default tells the model that the groups were picked only because they look similar, and to pick one only if the new text asks for the same specific thing as its members | As above |
-| `MergeInstructions` | null (uses `JudgePrompts.DefaultMergeInstructions`) | The system prompt for merge questions. The default calls two clusters one when a typical member of one would fit just as well in the other; a few odd members do not matter | As above |
+| `MergeMembersEachWay` | 1 | How a merge question is put to the model. Above 0, as yes-or-no join questions: whether each of this many members of one cluster (those nearest its centroid) belongs in the other, both ways; the clusters merge only if every answer is yes, and the first no ends it. 0 asks one question that compares the two groups as a whole (`MergeInstructions`), as 1.0 did | Leave it: a model places one text in a group far more reliably than it compares two groups, which on texts written to one template it tends to find alike. Raise it to 2 for more care before merging, at more requests per merge question. If you send requests yourself, build them with `JudgePrompts.BuildRequestsAsync` |
+| `MergeInstructions` | null (uses `JudgePrompts.DefaultMergeInstructions`) | The system prompt for merge questions asked as a whole (`MergeMembersEachWay = 0`). The default calls two clusters one when a typical member of one would fit just as well in the other; a few odd members do not matter | As above |
 | `Preference` | `Balanced` | Which mistake the model should rather make on a close call (`ClusteringPreference`). `Precision` adds "When you are unsure, answer that they do not belong together." (with choices: pick none); `Recall` adds "When you are unsure, answer that they belong together." (with choices: pick the best group rather than none); `Balanced` adds nothing. The sentence goes after the instructions, the defaults or your own | When you would rather leave some duplicates apart (`Precision`) or join some unlike items (`Recall`). Pair it with the matching threshold set from the [calibration report](how-to/calibrate-thresholds.md#preferences) |
 | `IncludeLabels` | `true` | Whether clusters' labels go into the prompts | Turn it off if labels are not reviewed, so text from one item that ended up in a label cannot reach every later question about its cluster |
 | `MaxParallelRequests` | 4 | Questions put to the model at once | Lower it for a local model on one GPU (1 or 2); raise it for a cloud provider within its rate limits |
@@ -185,13 +187,14 @@ The rules for `ClusteringOptions`: `EmbeddingModel` is not empty; every threshol
     "EmbeddingModel": "text-embedding-3-small",
     "JoinSimilarity": 0.83,
     "CheckSimilarity": 0.30,
-    "MergeSimilarity": 0.96,
-    "MergeCheckSimilarity": 0.48,
-    "MaxChecksPerItem": 5,
+    "MergeSimilarity": 0.72,
+    "MergeCheckSimilarity": 0.55,
+    "MaxChecksPerItem": 3,
     "MaxOpenQuestions": 200,
     "CandidateClusters": 10,
     "MaxClustersPerMaintain": 1000,
-    "MergeRespectsRefusals": true,
+    "MergeRefusals": "Ask",
+    "MergeLinkage": "Average",
     "JoinChoices": 3,
     "ExamplesPerQuestion": 10,
     "MergeExamplesPerCluster": 8,
