@@ -72,20 +72,20 @@
       },
       "Testcontainers.PostgreSql": {
         "type": "Direct",
-        "requested": "[4.16.0, )",
-        "resolved": "4.16.0",
-        "contentHash": "QqvFS8Oj+i6deH3QJOMd7jgFF9P3h7RZ37wOaoR97ZahMcSYMYCb+COR4nUVznT1d7EavEcZdUs1QV0ow69JiA==",
+        "requested": "[4.17.0, )",
+        "resolved": "4.17.0",
+        "contentHash": "fRb6dVf6QCOkNYmPp0x1MHJFkjBtomV4dpU1YinO87Yw8t5qSzKbSmJ9EsP0CUUZTi5zNjYSkhQ5wBxkvDHrgA==",
         "dependencies": {
-          "Testcontainers": "4.16.0"
+          "Testcontainers": "4.17.0"
         }
       },
       "Testcontainers.Qdrant": {
         "type": "Direct",
-        "requested": "[4.16.0, )",
-        "resolved": "4.16.0",
-        "contentHash": "0ZQF4dDL6Dyx3igjQQOrKrjDkQMQKUiLUxZvDv+la54TSeh5H+ZgySN1w/482TQKOGYLSayK+u+wxS9bd4J46Q==",
+        "requested": "[4.17.0, )",
+        "resolved": "4.17.0",
+        "contentHash": "5CcrZ9YnDwz/RYdCWKK2FNVqV/CAvdI7mtfxiH5H1PyrT6bCPRPI//M+ZzmqhZnUcEJUcL0bH4LQK3LSLJD5Tg==",
         "dependencies": {
-          "Testcontainers": "4.16.0"
+          "Testcontainers": "4.17.0"
         }
       },
       "xunit.runner.visualstudio": {
@@ -342,8 +342,8 @@
       },
       "Testcontainers": {
         "type": "Transitive",
-        "resolved": "4.16.0",
-        "contentHash": "JmMUZk6ZXQovbGQjaMB+YxOR0PbJTdYjOYjRcrm5LrA2dhLVMuCbhVGGunzCGIQfFMUB5Lno2LPOHMMuaGmuIg==",
+        "resolved": "4.17.0",
+        "contentHash": "yXAdoZ3dcrg84Iy05X10qRfz8EO35tpSmI1kK91Qe32MNz0DyPuSbiCi33i5AvSbYMET9HxBw32UuHJHSSK49A==",
         "dependencies": {
           "Docker.DotNet.Enhanced": "4.3.3",
           "Docker.DotNet.Enhanced.X509": "4.3.3",
@@ -433,7 +433,7 @@
       "akinly.vectordata": {
         "type": "Project",
         "dependencies": {
-          "Akinly": "[1.0.2, )",
+          "Akinly": "[1.1.0, )",
           "Microsoft.Extensions.VectorData.Abstractions": "[10.1.0, )"
         }
       },
